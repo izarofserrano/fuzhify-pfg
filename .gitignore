@@ -1,0 +1,29 @@
+# Datos (los CSVs grandes nunca van a git)
+data/raw/
+data/notebook_outputs/
+data/jobs/
+
+# Pero sí queremos los fixtures de test
+!tests/fixtures/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+
+# IDE
+.vscode/
+.idea/
+
+# Entorno
+.env
+.env.local
+
+# Notebooks: checkpoints sí se ignoran, los .ipynb NO
+.ipynb_checkpoints/

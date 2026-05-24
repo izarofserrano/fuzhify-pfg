@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\58029784W\\\\4Deusto-SegundoCuatri\\\\PFG\" -Recurse -Filter \"*.ipynb\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object FullName)"
+    ]
+  }
+}
