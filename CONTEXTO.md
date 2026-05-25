@@ -178,7 +178,10 @@ Estos umbrales son fijos y coherentes con los del selector de src02.
 - JUnit @Test         → def test_() con pytest
 - @Transactional      → async with session.begin()
 
-
+## Puertos locales
+- Backend:  http://localhost:8001  (mapeado desde contenedor 8000)
+- Frontend: http://localhost:5173
+- Postgres: localhost:5432
 
 ## Archivos de referencia en este repositorio
 - notebook/src00_*.ipynb → implementación de referencia de separación por sensores

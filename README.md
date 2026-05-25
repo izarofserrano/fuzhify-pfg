@@ -27,7 +27,7 @@ Esto levanta tres servicios:
 
 | Servicio   | URL local                      |
 |------------|-------------------------------|
-| Backend    | http://localhost:8000          |
+| Backend    | http://localhost:8001         |
 | Frontend   | http://localhost:5173          |
 | PostgreSQL | localhost:5432                 |
 
