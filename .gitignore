@@ -27,3 +27,7 @@ dist/
 
 # Notebooks: checkpoints sí se ignoran, los .ipynb NO
 .ipynb_checkpoints/
+
+.agents/
+.claude/settings.local.json
+.claude/skills/frontend-design/
