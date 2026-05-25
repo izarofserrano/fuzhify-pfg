@@ -163,13 +163,13 @@ def _detectar_var_tiempo(df_raw):
     def _tokenizar_col(col):
         return set(re.split(r'[_\-\s]+', col.lower())) | {col.lower()}
 
-    cols_obj = [c for c in df_raw.columns if df_raw[c].dtype == object]
+    cols_obj = [c for c in df_raw.columns if pd.api.types.is_string_dtype(df_raw[c])]
     cols_num = [c for c in df_raw.columns if pd.api.types.is_numeric_dtype(df_raw[c])]
 
     # Estrategia 1: columna datetime directa
     _candidata_solo_fecha = None
     for col in df_raw.columns:
-        if df_raw[col].dtype != object:
+        if not pd.api.types.is_string_dtype(df_raw[col]):
             continue
         try:
             parsed = pd.to_datetime(df_raw[col], dayfirst=True, errors='coerce')
