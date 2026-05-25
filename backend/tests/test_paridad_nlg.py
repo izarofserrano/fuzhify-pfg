@@ -1,19 +1,19 @@
-# -*- coding: utf-8 -*-
 """
-Test de paridad para el módulo nlg.
+Test de paridad src03: verifica que generar_informe() produce exactamente el
+mismo Markdown que el módulo genérico sobre los 3 datasets de referencia.
 
-Uso — una variable de entorno por caso:
-  PARIDAD_REGLAS   ruta al CSV de reglas (salida de src02 / minar_reglas)
-  PARIDAD_FUZZY    ruta al CSV fuzzificado (salida de src01)
-  PARIDAD_REF_MD   ruta al fichero Markdown de referencia (generado por el notebook)
+Las referencias (_v2.md) fueron generadas por el propio módulo portado,
+NO por el notebook original con hardcodes de sensor (Historia B: módulo genérico).
 
-Ejemplo (PowerShell):
-  $env:PARIDAD_REGLAS = "../data/DailyDelhiClimateTrain_meantemp_reglas.csv"
-  $env:PARIDAD_FUZZY  = "../data/DailyDelhiClimateTrain_meantemp_fuzzy.csv"
-  $env:PARIDAD_REF_MD = "../data/DailyDelhiClimateTrain_meantemp_NLG.md"
-  cd backend; .venv\\Scripts\\pytest.exe tests/test_paridad_nlg.py -v
+Ejecución con defaults (asume que los archivos están en data/notebook_outputs/):
+  cd backend
+  pytest tests/test_paridad_nlg.py -v
+
+Variables de entorno opcionales para sobreescribir paths:
+  PARIDAD_REGLAS_DELHI / PARIDAD_FUZZY_DELHI / PARIDAD_REF_DELHI
+  PARIDAD_REGLAS_3600  / PARIDAD_FUZZY_3600  / PARIDAD_REF_3600
+  PARIDAD_REGLAS_6823  / PARIDAD_FUZZY_6823  / PARIDAD_REF_6823
 """
-
 import os
 
 import pandas as pd
@@ -21,92 +21,64 @@ import pytest
 
 from app.core.nlg import generar_informe, NLGConfig
 
+# ── Paths de referencia (con fallback a data/notebook_outputs/) ───────────────
+_BASE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "notebook_outputs")
 
-# ---------------------------------------------------------------------------
-# Datasets parametrizados
-# ---------------------------------------------------------------------------
-
-DATASETS = [
+_DATASETS = [
     {
-        "id":           "delhi",
-        "env_reglas":   "PARIDAD_REGLAS_DELHI",
-        "env_fuzzy":    "PARIDAD_FUZZY_DELHI",
-        "env_ref":      "PARIDAD_REF_DELHI",
-        "nombre_dataset": "DailyDelhiClimateTrain",
-        "strict":       True,  # referencia generada con la versión actual del notebook
+        "nombre":         "DailyDelhiClimateTrain_meantemp",
+        "nombre_dataset": "delhi",
+        "reglas":  os.environ.get("PARIDAD_REGLAS_DELHI",
+                       os.path.join(_BASE, "DailyDelhiClimateTrain_meantemp_reglas.csv")),
+        "fuzzy":   os.environ.get("PARIDAD_FUZZY_DELHI",
+                       os.path.join(_BASE, "DailyDelhiClimateTrain_meantemp_fuzzy.csv")),
+        "ref":     os.environ.get("PARIDAD_REF_DELHI",
+                       os.path.join(_BASE, "DailyDelhiClimateTrain_meantemp_resumen_v2.md")),
     },
     {
-        "id":           "3600",
-        "env_reglas":   "PARIDAD_REGLAS_3600",
-        "env_fuzzy":    "PARIDAD_FUZZY_3600",
-        "env_ref":      "PARIDAD_REF_3600",
-        "nombre_dataset": "3600_intensidad",
-        "strict":       False,  # referencia de versión antigua del notebook (plantillas distintas)
+        "nombre":         "3600_intensidad",
+        "nombre_dataset": "3600",
+        "reglas":  os.environ.get("PARIDAD_REGLAS_3600",
+                       os.path.join(_BASE, "3600_intensidad_reglas.csv")),
+        "fuzzy":   os.environ.get("PARIDAD_FUZZY_3600",
+                       os.path.join(_BASE, "3600_intensidad_fuzzy.csv")),
+        "ref":     os.environ.get("PARIDAD_REF_3600",
+                       os.path.join(_BASE, "3600_intensidad_resumen_v2.md")),
     },
     {
-        "id":           "6823",
-        "env_reglas":   "PARIDAD_REGLAS_6823",
-        "env_fuzzy":    "PARIDAD_FUZZY_6823",
-        "env_ref":      "PARIDAD_REF_6823",
-        "nombre_dataset": "6823_ocupacion",
-        "strict":       False,  # referencia de versión antigua del notebook (plantillas distintas)
+        "nombre":         "6823_ocupacion",
+        "nombre_dataset": "6823",
+        "reglas":  os.environ.get("PARIDAD_REGLAS_6823",
+                       os.path.join(_BASE, "6823_ocupacion_reglas.csv")),
+        "fuzzy":   os.environ.get("PARIDAD_FUZZY_6823",
+                       os.path.join(_BASE, "6823_ocupacion_fuzzy.csv")),
+        "ref":     os.environ.get("PARIDAD_REF_6823",
+                       os.path.join(_BASE, "6823_ocupacion_resumen_v2.md")),
     },
 ]
 
-# Fallback: env vars genéricas PARIDAD_REGLAS / PARIDAD_FUZZY / PARIDAD_REF_MD
-# permiten apuntar al único dataset que se quiere probar sin modificar el código.
-GENERIC = {
-    "id":           "generic",
-    "env_reglas":   "PARIDAD_REGLAS",
-    "env_fuzzy":    "PARIDAD_FUZZY",
-    "env_ref":      "PARIDAD_REF_MD",
-    "nombre_dataset": "",   # se auto-detecta
-    "strict":       True,
-}
 
-
-def _build_params():
-    params = []
-    # Genérico primero (si está definido)
-    if os.environ.get(GENERIC["env_reglas"]):
-        params.append(pytest.param(GENERIC, id="generic"))
-    for ds in DATASETS:
-        if os.environ.get(ds["env_reglas"]):
-            params.append(pytest.param(ds, id=ds["id"]))
-    return params
-
-
-def _skip_if_no_env(ds):
-    reglas = os.environ.get(ds["env_reglas"], "")
-    fuzzy  = os.environ.get(ds["env_fuzzy"],  "")
-    ref    = os.environ.get(ds["env_ref"],    "")
-    if not reglas or not fuzzy or not ref:
-        pytest.skip(
-            f"Variables de entorno no definidas: "
-            f"{ds['env_reglas']}, {ds['env_fuzzy']}, {ds['env_ref']}"
-        )
-    return reglas, fuzzy, ref
-
-
-# ---------------------------------------------------------------------------
-# Test principal
-# ---------------------------------------------------------------------------
-
-@pytest.mark.parametrize("ds", [
-    pytest.param(GENERIC, id="generic"),
-    *[pytest.param(ds, id=ds["id"]) for ds in DATASETS],
-])
-def test_paridad_nlg(ds):
+@pytest.mark.parametrize("dataset", _DATASETS, ids=[d["nombre"] for d in _DATASETS])
+def test_paridad_nlg(dataset):
     """
-    Ejecuta generar_informe() sobre los ficheros de referencia y compara
-    el Markdown resultante línea a línea con el generado por el notebook.
+    Ejecuta generar_informe() sobre los CSVs de referencia y compara el
+    Markdown resultante línea a línea con la referencia _v2.md del módulo.
     """
-    reglas_path, fuzzy_path, ref_path = _skip_if_no_env(ds)
+    reglas_path = dataset["reglas"]
+    fuzzy_path  = dataset["fuzzy"]
+    ref_path    = dataset["ref"]
+
+    if not os.path.exists(reglas_path):
+        pytest.skip(f"CSV de reglas no encontrado: {reglas_path}")
+    if not os.path.exists(fuzzy_path):
+        pytest.skip(f"CSV fuzzy no encontrado: {fuzzy_path}")
+    if not os.path.exists(ref_path):
+        pytest.skip(f"Referencia _v2.md no encontrada: {ref_path}")
 
     df_reglas = pd.read_csv(reglas_path)
     df_fuzzy  = pd.read_csv(fuzzy_path)
 
-    config = NLGConfig(nombre_dataset=ds["nombre_dataset"])
+    config  = NLGConfig(nombre_dataset=dataset["nombre_dataset"])
     informe = generar_informe(df_reglas, df_fuzzy, config)
 
     with open(ref_path, encoding="utf-8") as f:
@@ -115,32 +87,13 @@ def test_paridad_nlg(ds):
     lineas_out = [l.rstrip() for l in informe.splitlines()]
     lineas_ref = [l.rstrip() for l in ref_texto.splitlines()]
 
-    if ds["strict"]:
-        # Comparación estricta línea a línea
-        assert len(lineas_out) == len(lineas_ref), (
-            f"Número de líneas distinto: módulo={len(lineas_out)}, ref={len(lineas_ref)}"
-        )
-        for i, (got, exp) in enumerate(zip(lineas_out, lineas_ref), start=1):
-            assert got == exp, (
-                f"Diferencia en línea {i}:\n"
-                f"  módulo: {repr(got)}\n"
-                f"  ref:    {repr(exp)}"
-            )
-    else:
-        # Comparación no-estricta: solo se verifica la estructura de alto nivel
-        # (La referencia es de una versión antigua del notebook con plantillas distintas.)
-        secciones_esperadas = [
-            "# Resumen de comportamiento",
-            "## Apéndice",
-            "## Estadísticas globales",
-        ]
-        for seccion in secciones_esperadas:
-            assert any(seccion in l for l in lineas_out), (
-                f"Sección esperada no encontrada en el informe: {repr(seccion)}"
-            )
-        # El número de reglas debe coincidir con las del CSV
-        n_reglas = len(df_reglas)
-        assert f"**Total de reglas analizadas:** {n_reglas}" in informe or \
-               any(str(n_reglas) in l for l in lineas_out[:20]), (
-            f"El número de reglas ({n_reglas}) no aparece en la cabecera del informe."
+    assert len(lineas_out) == len(lineas_ref), (
+        f"[{dataset['nombre']}] Número de líneas distinto: "
+        f"módulo={len(lineas_out)}, ref={len(lineas_ref)}"
+    )
+    for i, (got, exp) in enumerate(zip(lineas_out, lineas_ref), start=1):
+        assert got == exp, (
+            f"[{dataset['nombre']}] Diferencia en línea {i}:\n"
+            f"  módulo: {repr(got)}\n"
+            f"  ref:    {repr(exp)}"
         )

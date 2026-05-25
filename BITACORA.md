@@ -37,8 +37,9 @@ Hallazgos:
 Acción correctiva: regenerar referencias con el módulo nuevo, test estricto
 contra esas, e implementar test de fase 4 desde cero.
 
-— dos bugs de entorno encontrados y resueltos en la auditoría de fase 1:
-
-Python 3.14 + pandas: dtype == object falla para columnas string → fix: pd.api.types.is_string_dtype().
-holidays no estaba en requirements.txt → t_Festivo siempre 0 → eliminada como constante → fallo de paridad. Fix: pip install holidays + añadir al requirements.
-Ambos son bugs de entorno, no de lógica. La lógica del módulo es fiel al notebook.
+## 2026-05-26 — Auditoría completa y cierre de fases 1+2
+Bugs encontrados y resueltos:
+1. Python 3.14: dtype str != object → fix is_string_dtype()
+2. holidays no en requirements → t_Festivo=0 → eliminada → fallo paridad
+Resultado: fase 1 (3/3) y fase 2 (3/3) certificadas con paridad real.
+Siguiente: rediseñar test fase 3 con referencias v2 (módulo genérico).
