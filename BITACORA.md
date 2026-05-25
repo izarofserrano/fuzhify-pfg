@@ -43,3 +43,14 @@ Bugs encontrados y resueltos:
 2. holidays no en requirements → t_Festivo=0 → eliminada → fallo paridad
 Resultado: fase 1 (3/3) y fase 2 (3/3) certificadas con paridad real.
 Siguiente: rediseñar test fase 3 con referencias v2 (módulo genérico).
+
+## 2026-05-26 — Auditoría completa + cierre de fases 1-4
+Todos los módulos core certificados con tests de paridad reales:
+- Fase 1 (fuzzy):  3/3 passed — 2 bugs de entorno encontrados y resueltos
+  (Python 3.14 dtype, holidays no instalada)
+- Fase 2 (mining): 3/3 passed — test autocontenido, limpio desde el inicio
+- Fase 3 (nlg):    3/3 passed — test trampa detectado y reescrito,
+  referencias regeneradas con módulo genérico (Historia B)
+- Fase 4 (global): 1/1 passed — referencia regenerada con inputs correctos
+  (Madrid 2 sensores, no Delhi)
+Siguiente sesión: fase 5 (Alembic) y fase 6 (endpoints FastAPI).
