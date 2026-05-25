@@ -9,3 +9,4 @@ asyncpg
 alembic
 python-multipart
 holidays>=0.97
+tabulate
