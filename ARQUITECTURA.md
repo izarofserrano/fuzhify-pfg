@@ -222,6 +222,20 @@ completado
 error  (error_mensaje disponible vía GET /jobs/{id})
 ```
 
+### Campo `fase_actual` vs campo `estado`
+
+`GET /jobs/{id}` devuelve dos campos distintos. El campo `estado` sigue la
+máquina de estados anterior. El campo `fase_actual` usa un vocabulario
+diferente y es el que consume `ProgressPipeline.vue` para actualizar la barra:
+
+| `fase_actual` | Significado | Nodos completados | Progreso barra |
+|---|---|---|---|
+| `"fuzzy"` | Fase 1 (fuzzificación) en curso | ninguno | 20 % |
+| `"mining"` | Fase 2 (minería) en curso | nodo 1 | 55 % |
+| `"nlg"` | Fase 3 (NLG) en curso | nodos 1 y 2 | 80 % |
+| `null` + `estado="completado"` | pipeline terminado | los tres | 100 % |
+| cualquiera + `estado="error"` | fallo en pipeline | ninguno | congela último valor |
+
 ---
 
 ## Archivos generados por job

@@ -129,3 +129,41 @@ explícito antes de leer atributos post-commit."
 
 Test end-to-end manual verificado:
 detect-metric → run → completado en 2.5 min → 33 reglas → informe MD.
+
+## 2026-05-26 — Rediseño visual del frontend + corrección ProgressPipeline
+
+### Sistema de diseño (style.css, App.vue, ProgressPipeline.vue)
+- Fondo: cuadrícula de puntos sobre `#080A0F` → fondo liso `#0F172A`.
+- Acento: naranja `#F97316` → azul `#2563EB` en todas las variables CSS y valores literales.
+- Tipografía: Google Fonts (Syne + JetBrains Mono) eliminados → Inter con fallback system-ui.
+- Glows y sombras luminosas eliminados (btn-primary:hover, progress-bar-fill, nodo activo).
+- Navbar: glassmorphism + backdrop-filter → fondo sólido `#1E293B`.
+- Animación pulse-dot en nodos del pipeline eliminada; nodo activo diferenciado con border-width: 3px.
+
+### Estilos .prose-fuzhify (InformeView — markdown renderizado)
+- h1/h2/h3: `#93C5FD`; h1/h2 con border-bottom `1px solid #1E40AF`.
+- blockquote: border-left `#2563EB`, fondo `#1E293B`.
+- th: fondo `#1E3A5F`, texto blanco; filas pares: fondo `#1E293B`.
+- code inline: fondo `#1E293B`, color `#93C5FD`; strong: `#BFDBFE`; links: `#60A5FA`.
+
+### PDF — templates/styles.css
+- Naranja/rojo eliminado: portada-marca, portada-linea, seccion-h2 → `#1D4ED8`/`#2563EB`.
+- Cabeceras de tabla (`.prose thead th`, `.tabla-reglas thead th`): `#fde8d8`/`#7a2000` → `#dbeafe`/`#1D4ED8`.
+- Filas pares: `#fdf8f5` → `#eff6ff`; blockquote: border `#2563EB`, fondo `#eff6ff`.
+
+### Bug fix — ProgressPipeline.vue
+**Causa:** `estadoFase()` comparaba `fase_actual` contra `['fuzzificacion', 'mineria', 'nlg']`
+pero la API envía `'fuzzy'`, `'mining'`, `'nlg'` → los nodos nunca se marcaban activos ni completados.
+**Fix:** reescritura de `estadoFase()` con comparaciones directas contra los valores reales de la API.
+**Segundo bug:** la barra volvía a 0 % en error en lugar de congelarse.
+**Fix:** `watch` + `ref(ultimoProgreso)` que no actualiza cuando `estado === 'error'`.
+Documentado en ARQUITECTURA.md (sección "Campo fase_actual vs campo estado").
+
+### Causa raíz de "sigue sin funcionar" — Vite HMR en Windows + Docker
+El fix de ProgressPipeline era correcto, pero el contenedor seguía sirviendo el código antiguo.
+Causa: Vite usa `inotify` (eventos del kernel Linux) para detectar cambios. En Windows + Docker
+Desktop, los ficheros del host se montan en el contenedor Linux via WSL2/Hyper-V y los eventos
+`inotify` no cruzan ese límite → Vite nunca veía los cambios → HMR muerto silenciosamente.
+Fix: `server.watch.usePolling: true` en `frontend/vite.config.js`. Vite pasa a leer
+los ficheros periódicamente en lugar de esperar eventos del kernel. A partir de ahora,
+cualquier cambio en `.vue` o `.css` se refleja en el navegador sin reiniciar el contenedor.

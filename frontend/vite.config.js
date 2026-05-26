@@ -15,5 +15,8 @@ export default defineConfig({
     proxy: {
       '/api': 'http://backend:8000',
     },
+    watch: {
+      usePolling: true,   // necesario en Windows/WSL2: inotify no cruza el límite del volumen Docker
+    },
   },
 })

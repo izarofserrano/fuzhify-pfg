@@ -40,7 +40,7 @@ body {
 .portada-marca {
   font-size: 30pt;
   font-weight: 900;
-  color: #bd2a00;  /* extremo oscuro de YlOrRd */
+  color: #1D4ED8;
   letter-spacing: -0.03em;
   margin-bottom: 6pt;
 }
@@ -53,7 +53,7 @@ body {
 .portada-linea {
   width: 48pt;
   height: 2.5pt;
-  background: #bd2a00;
+  background: #2563EB;
   margin-bottom: 20pt;
 }
 
@@ -121,10 +121,10 @@ body {
 .seccion-h2 {
   font-size: 15pt;
   font-weight: 800;
-  color: #bd2a00;
+  color: #1D4ED8;
   margin: 0 0 13pt;
   padding-bottom: 6pt;
-  border-bottom: 1pt solid #e8d6ce;
+  border-bottom: 1pt solid #2563EB;
 }
 
 /* ═══════════════════════════════════════════════
@@ -146,8 +146,8 @@ body {
 .prose blockquote {
   margin: 8pt 0 10pt 0;
   padding: 6pt 12pt;
-  border-left: 3pt solid #e8a080;
-  background: #fdf6f2;
+  border-left: 3pt solid #2563EB;
+  background: #eff6ff;
   color: #444;
   font-size: 9.5pt;
 }
@@ -178,18 +178,18 @@ body {
   margin: 8pt 0 12pt;
 }
 .prose thead th {
-  background: #fde8d8;
-  color: #7a2000;
+  background: #dbeafe;
+  color: #1D4ED8;
   font-weight: 700;
   padding: 4pt 8pt;
   text-align: left;
-  border: 0.5pt solid #e0c8be;
+  border: 0.5pt solid #bfdbfe;
 }
 .prose tbody td {
   padding: 3pt 8pt;
   border: 0.5pt solid #eaeaea;
 }
-.prose tbody tr:nth-child(even) td { background: #fdf8f5; }
+.prose tbody tr:nth-child(even) td { background: #eff6ff; }
 
 .prose strong { font-weight: 700; }
 .prose em     { font-style: italic; }
@@ -235,12 +235,12 @@ body {
   font-size: 8pt;
 }
 .tabla-reglas thead th {
-  background: #fde8d8;
-  color: #7a2000;
+  background: #dbeafe;
+  color: #1D4ED8;
   font-weight: 700;
   padding: 4pt 6pt;
   text-align: left;
-  border: 0.5pt solid #e0c8be;
+  border: 0.5pt solid #bfdbfe;
   white-space: nowrap;
 }
 .tabla-reglas tbody td {
@@ -249,4 +249,4 @@ body {
   font-family: 'DejaVu Sans Mono', 'Courier New', monospace;
   word-break: break-word;
 }
-.tabla-reglas tbody tr:nth-child(even) td { background: #fdf8f5; }
+.tabla-reglas tbody tr:nth-child(even) td { background: #eff6ff; }

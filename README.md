@@ -61,6 +61,11 @@ La aplicación estará disponible en:
 - API: http://localhost:8001/api/v1
 - Documentación API: http://localhost:8001/docs
 
+> **Windows + Docker Desktop:** Vite usa `inotify` para detectar cambios de fichero, pero
+> los eventos no cruzan el límite WSL2/Hyper-V del volumen montado. El HMR ya está configurado
+> con `usePolling: true` en `vite.config.js`, por lo que los cambios en `.vue` y `.css`
+> se reflejan automáticamente en el navegador sin reiniciar el contenedor.
+
 ## Correr los tests de paridad
 
 ```bash

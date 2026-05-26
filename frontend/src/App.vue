@@ -49,8 +49,7 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(8, 10, 15, 0.85);
-  backdrop-filter: blur(12px);
+  background: #1E293B;
   border-bottom: 1px solid var(--c-border);
 }
 .nav-inner {
@@ -75,7 +74,7 @@
   line-height: 1;
 }
 .brand-name {
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   font-size: 1.1rem;
   font-weight: 800;
   color: var(--c-text);

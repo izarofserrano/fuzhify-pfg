@@ -37,17 +37,17 @@
 
 <script setup>
 // Recibe estado y fase_actual del job desde el padre
-import { computed } from 'vue'
+// fase_actual que envía la API: 'fuzzy' | 'mining' | 'nlg' | null
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   estado: String,
   faseActual: { type: String, default: null },
 })
 
-// Orden y metadatos de las fases
 const fases = [
-  { id: 'fuzzificacion', label: 'Fuzzificación', pct: 33 },
-  { id: 'mineria',       label: 'Minería',        pct: 66 },
+  { id: 'fuzzificacion', label: 'Fuzzificación',   pct: 33 },
+  { id: 'mineria',       label: 'Minería',          pct: 66 },
   { id: 'nlg',           label: 'Lenguaje natural', pct: 100 },
 ]
 
@@ -56,27 +56,39 @@ function estadoFase(faseId) {
   if (props.estado === 'completado') return 'done'
   if (props.estado === 'error')      return 'pending'
 
-  const orden = ['fuzzificacion', 'mineria', 'nlg']
-  const idxActual = orden.indexOf(props.faseActual ?? '')
-  const idxFase   = orden.indexOf(faseId)
-
-  if (idxFase < idxActual)  return 'done'
-  if (idxFase === idxActual) return 'active'
+  const fa = props.faseActual
+  if (faseId === 'fuzzificacion') {
+    if (fa === 'mining' || fa === 'nlg') return 'done'
+    if (fa === 'fuzzy')                  return 'active'
+    return 'pending'
+  }
+  if (faseId === 'mineria') {
+    if (fa === 'nlg')    return 'done'
+    if (fa === 'mining') return 'active'
+    return 'pending'
+  }
+  if (faseId === 'nlg') {
+    if (fa === 'nlg') return 'active'
+    return 'pending'
+  }
   return 'pending'
 }
 
-// Porcentaje total para la barra lineal
-const progresoTotal = computed(() => {
-  if (props.estado === 'completado') return 100
-  if (props.estado === 'error')      return 0
-  const map = {
-    fuzzificacion: 20,
-    mineria:       55,
-    nlg:           85,
-    pendiente:     5,
-  }
-  return map[props.faseActual ?? props.estado] ?? 0
-})
+// Barra lineal: congela el valor en error en lugar de volver a 0
+const ultimoProgreso = ref(0)
+
+watch(
+  () => ({ estado: props.estado, faseActual: props.faseActual }),
+  ({ estado, faseActual }) => {
+    if (estado === 'completado') { ultimoProgreso.value = 100; return }
+    if (estado === 'error') return  // congela el progreso actual
+    const map = { fuzzy: 20, mining: 55, nlg: 80 }
+    ultimoProgreso.value = map[faseActual] ?? 0
+  },
+  { immediate: true },
+)
+
+const progresoTotal = computed(() => ultimoProgreso.value)
 </script>
 
 <style scoped>
@@ -117,7 +129,7 @@ const progresoTotal = computed(() => {
   align-items: center;
   justify-content: center;
   color: var(--c-muted);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ui-monospace, monospace;
   font-size: 0.85rem;
   transition: border-color 0.3s, background 0.3s, color 0.3s;
 }
@@ -125,7 +137,7 @@ const progresoTotal = computed(() => {
 /* Fase completada */
 .fase-node.done .node-circle {
   border-color: var(--c-accent);
-  background: rgba(249,115,22,0.15);
+  background: rgba(37,99,235,0.15);
   color: var(--c-accent);
 }
 .fase-node.done .node-circle svg { width: 18px; height: 18px; }
@@ -133,18 +145,17 @@ const progresoTotal = computed(() => {
 /* Fase activa */
 .fase-node.active .node-circle {
   border-color: var(--c-warn);
+  border-width: 3px;
   background: rgba(234,179,8,0.1);
-  box-shadow: 0 0 16px rgba(234,179,8,0.3);
 }
 
-/* Punto pulsante */
+/* Punto activo (sin animación) */
 .pulse-dot {
   display: block;
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--c-warn);
-  animation: pulse-dot 1.2s ease-in-out infinite;
 }
 
 /* Labels de fase */
@@ -161,7 +172,7 @@ const progresoTotal = computed(() => {
 .fase-node.active .fase-label { color: var(--c-warn); }
 .fase-pct {
   display: block;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: ui-monospace, monospace;
   font-size: 0.65rem;
   color: var(--c-muted);
   margin-top: 2px;
@@ -177,9 +188,8 @@ const progresoTotal = computed(() => {
 }
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #F97316, #FBBF24);
+  background: #2563EB;
   border-radius: 999px;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 8px rgba(249,115,22,0.5);
 }
 </style>
