@@ -10,3 +10,7 @@ alembic
 python-multipart
 holidays>=0.97
 tabulate
+weasyprint
+matplotlib
+jinja2
+markdown

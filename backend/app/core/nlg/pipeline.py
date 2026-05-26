@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import date as _date
 
 import pandas as pd
 
@@ -45,10 +46,18 @@ class NLGConfig:
     metrica: str           = ""          # si vacío, se auto-detecta del CSV
     min_reglas_grupo: int  = MIN_REGLAS_GRUPO
     var_tiempo: str        = ""          # si vacío, se auto-detecta
+    min_soporte: float     = 0.005
+    min_confianza: float   = 0.50
+    lift_minimo: float     = 1.0
+    max_prof: int          = 3
+    k_beam: int            = 10
+    top_por_consecuente: int = 10
+    pais: str              = "ES"
+    subdiv: str            = ""
 
 
 # ---------------------------------------------------------------------------
-# 5. grupo_a_parrafo — celda 9 del notebook
+# 5. grupo_a_parrafo - celda 9 del notebook
 # ---------------------------------------------------------------------------
 
 def grupo_a_parrafo(filas, nombre_metrica, consecuente, min_reglas, modo="tecnico"):
@@ -138,7 +147,7 @@ def grupo_a_parrafo(filas, nombre_metrica, consecuente, min_reglas, modo="tecnic
 
 
 # ---------------------------------------------------------------------------
-# 6a. Narrativa diaria — celda 11 del notebook
+# 6a. Narrativa diaria - celda 11 del notebook
 # ---------------------------------------------------------------------------
 
 def _consecuente_hora(df_reglas, hora):
@@ -275,7 +284,7 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
 
     # Plantillas con estructura sintáctica diferente por franja
     def _frase_madrugada(rango, nivel, emoji, matiz, ctx, **kwargs):
-        base = f"De madrugada ({rango}), el " + nombre_metrica + " es **" + nivel + "** " + emoji
+        base = f"De madrugada ({rango}), el " + nombre_metrica + " es **" + nivel + "**"
         detalles = []
         if matiz:
             if ctx["lab"]:
@@ -308,7 +317,7 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
         else:
             verbo = "alcanza niveles"
 
-        base = f"Al llegar la mañana ({rango}), el {nombre_metrica} {verbo} **{nivel}** {emoji}"
+        base = f"Al llegar la mañana ({rango}), el {nombre_metrica} {verbo} **{nivel}**"
         detalles = []
         if ctx["lab"] and ctx["fds"]:
             detalles.append("en días laborables; se reduce sensiblemente en fin de semana")
@@ -336,7 +345,7 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
         else:
             verbo = "se sitúa en niveles"
 
-        base = f"Por la tarde ({rango}), el {nombre_metrica} {verbo} **{nivel}** {emoji}"
+        base = f"Por la tarde ({rango}), el {nombre_metrica} {verbo} **{nivel}**"
         detalles = []
         if ctx["lab"] and ctx["fds"]:
             detalles.append("especialmente entre semana, con calma en fin de semana")
@@ -362,7 +371,7 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
         else:
             verbo = "se sitúa en un nivel"
 
-        base = f"Al caer la noche ({rango}), el {nombre_metrica} {verbo} **{nivel}** {emoji}"
+        base = f"Al caer la noche ({rango}), el {nombre_metrica} {verbo} **{nivel}**"
         detalles = []
         if matiz:
             detalles.append(f"con un {matiz}")
@@ -468,7 +477,7 @@ def _detalle_por_franja(df_reglas, nombre_metrica, min_reglas_grupo=2):
                 lift_val = f"{row['lift']:.1f}"
                 cal      = construir_calidad(df_reglas)(row)
                 lineas.append(
-                    f"- {emoji} **{desc_v.capitalize()}** {cal}: "
+                    f"- **{desc_v.capitalize()}** {cal}: "
                     f"{desc_t} (confianza {conf_pct} %, lift {lift_val})"
                 )
         lineas.append("")
@@ -508,17 +517,17 @@ def _parrafo_calendario(df_reglas, nombre_metrica, lift_min=3.0, top_n=3):
         emoji   = NIVEL_EMOJI.get(row["consecuente"], "")
         conf    = int(round(row["confianza"] * 100))
         lineas.append(
-            f"- {emoji} En **{desc_t}**, la {nombre_metrica} tiende a ser "
+            f"- En **{desc_t}**, la {nombre_metrica} tiende a ser "
             f"**{desc_v}** (confianza {conf} %, lift {row['lift']:.1f})."
         )
     return "\n".join(lineas)
 
 
 def _generar_glosario_breve(metrica):
-    """Glosario corto, sin jerga técnica — para la cabecera."""
+    """Glosario corto, sin jerga técnica: para la cabecera."""
     return (
-        "> ### 📖 Niveles de la métrica analizada (" + metrica + ") \n"
-        "> Escala desde **excepcionalmente bajo** ⚪ hasta **excepcionalmente alto** 🔴, "
+        "> ### Niveles de la métrica analizada (" + metrica + ") \n"
+        "> Escala desde **excepcionalmente bajo** hasta **excepcionalmente alto**, "
         "calculada a partir de la desviación sobre la media histórica del propio sensor.\n"
         ">\n"
         "> Cuando el patrón es *muy diferenciado* del comportamiento normal se describe "
@@ -527,9 +536,9 @@ def _generar_glosario_breve(metrica):
 
 
 def _generar_glosario_tecnico():
-    """Glosario completo — para insertar al INICIO del apéndice técnico."""
+    """Glosario completo: para insertar al INICIO del apéndice técnico."""
     return (
-        "> ### 📖 Glosario técnico (apéndice)\n"
+        "> ### Glosario técnico (apéndice)\n"
         "> * **Confianza:** probabilidad (0–100 %) de que el patrón sea cierto cuando "
         "se da el contexto. Confianza 80 % significa que, en ese contexto, el la métrica "
         "se comporta así 8 de cada 10 veces.\n"
@@ -542,16 +551,17 @@ def _generar_glosario_tecnico():
 
 
 # ---------------------------------------------------------------------------
-# 6b. generar_resumen — celda 12 del notebook (adaptada a parámetros explícitos)
+# 6b. generar_resumen - celda 12 del notebook (adaptada a parámetros explícitos)
 # ---------------------------------------------------------------------------
 
 def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
                     bloques=None, granularidad_desc="desconocida",
-                    grupos_excluyentes=None):
+                    grupos_excluyentes=None, config=None):
     """
     Genera el resumen completo en Markdown.
 
     Estructura:
+      0. Cabecera de metadatos
       1. Cabecera
       2. Narrativa coloquial
       3. Sección de patrones estacionales (si aplica)
@@ -563,7 +573,10 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
         bloques = {}
     if grupos_excluyentes is None:
         grupos_excluyentes = []
+    if config is None:
+        config = NLGConfig()
 
+    fecha_actual = _date.today().strftime("%d/%m/%Y")
     nombre_metrica = metrica.replace("_", " ")
 
     HAY_HORAS      = bloques.get("HAY_HORAS", False)
@@ -582,37 +595,43 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
     if n_filtradas > 0:
         print(f"☢️  {n_filtradas} regla(s) eliminadas por combinación inválida.")
 
-    # Ordenar por lift DESC — necesario para que agrupar_reglas sea determinista
+    # Ordenar por lift DESC: necesario para que agrupar_reglas sea determinista
     df_reglas = df_reglas.sort_values("lift", ascending=False).reset_index(drop=True)
 
     mapa_horario = _mapa_horario(df_reglas)
 
     lineas = []
 
+    # ── 0. Cabecera de metadatos ─────────────────────────────────────────────
+    lineas.append("---")
+    lineas.append("**Fuzhify**: Informe de análisis difuso")
+    lineas.append("")
+    lineas.append("| | |")
+    lineas.append("|---|---|")
+    lineas.append(f"| **Dataset** | {dataset} |")
+    lineas.append(f"| **Métrica** | {metrica} |")
+    lineas.append(f"| **Fecha** | {fecha_actual} |")
+    lineas.append(f"| **min_soporte** | {config.min_soporte} |")
+    lineas.append(f"| **min_confianza** | {config.min_confianza} |")
+    lineas.append(f"| **lift_minimo** | {config.lift_minimo} |")
+    lineas.append(f"| **max_prof** | {config.max_prof} |")
+    lineas.append(f"| **k_beam** | {config.k_beam} |")
+    lineas.append(f"| **top_por_consecuente** | {config.top_por_consecuente} |")
+    lineas.append(f"| **pais** | {config.pais} |")
+    lineas.append(f"| **subdiv** | {config.subdiv or 'nacional'} |")
+    lineas.append(f"| **min_reglas_grupo** | {config.min_reglas_grupo} |")
+    lineas.append("")
+    lineas.append("---")
+    lineas.append("")
+
     # ── 1. Cabecera ─────────────────────────────────────────────────────────
-    lineas.append(f"# Resumen de comportamiento — {dataset}")
+    lineas.append(f"# Resumen de comportamiento: {dataset}")
     lineas.append("")
     lineas.append(f"**Métrica analizada:** {nombre_metrica.capitalize()}  ")
     lineas.append(f"**Total de reglas analizadas:** {len(df_reglas)}")
     lineas.append("")
 
     lineas.append(_generar_glosario_breve(metrica))
-
-    # ── Visualizaciones ─────────────────────────────────────────────────────
-    lineas.append("## Visualizaciones")
-    lineas.append("")
-    lineas.append("### Mapa de calor hora × día de la semana")
-    lineas.append(f"![Mapa de calor hora x día](data/{dataset}_heatmap.png)")
-    lineas.append("")
-    lineas.append("### Reglas por fuerza de asociación (lift)")
-    lineas.append(f"![Barras lift](data/{dataset}_barras_lift.png)")
-    lineas.append("")
-    lineas.append("### Soporte vs Confianza")
-    lineas.append(f"![Scatter soporte-confianza](data/{dataset}_scatter.png)")
-    lineas.append("")
-    lineas.append("### Resumen por categoría")
-    lineas.append(f"![Tabla consecuentes](data/{dataset}_tabla_consecuentes.png)")
-    lineas.append("")
 
     # ── 2. Narrativa coloquial ──────────────────────────────────────────────
     if HAY_HORAS or HAY_FRANJAS:
@@ -624,7 +643,7 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
     else:
         lineas.append(f"## Patrones detectados")
         lineas.append(
-            f"> ℹ️ Este dataset tiene granularidad **{granularidad_desc}** — "
+            f"> Este dataset tiene granularidad **{granularidad_desc}**: "
             f"no hay patrones por franja horaria. "
             f"Los patrones detectados son {'estacionales y de calendario' if HAY_MESES or HAY_ESTACIONES else 'temporales'}."
         )
@@ -650,7 +669,7 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
     # ── 4. Apéndice ─────────────────────────────────────────────────────────
     lineas.append("---")
     lineas.append("")
-    lineas.append("## Apéndice — Análisis por nivel de " + metrica)
+    lineas.append("## Apéndice: Análisis por nivel de " + metrica)
     lineas.append("")
     lineas.append("")
     lineas.append(_generar_glosario_tecnico())
@@ -684,12 +703,12 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
         grupos   = agrupar_reglas(df_c, umbral_solapamiento=0.4)
         n_grupos = len(grupos)
 
-        lineas.append(f"### {emoji} {nombre_metrica.capitalize()} {desc_v}")
+        lineas.append(f"### {nombre_metrica.capitalize()} {desc_v}")
         lineas.append(
-            f"*{len(df_c)} {'regla' if len(df_c)==1 else 'reglas'} — "
+            f"*{len(df_c)} {'regla' if len(df_c)==1 else 'reglas'}, "
             f"agrupadas en {n_grupos} {'contexto' if n_grupos==1 else 'contextos'}* | "
             f"confianza media: {df_c['confianza'].mean()*100:.0f} %, "
-            f"lift medio: {df_c['lift'].mean():.1f} "
+            f"lift medio: {df_c['lift'].mean():.1f}"
         )
         lineas.append("")
 
@@ -716,7 +735,7 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
 
 
 # ---------------------------------------------------------------------------
-# generar_informe — función pública del módulo
+# generar_informe: función pública del módulo
 # ---------------------------------------------------------------------------
 
 def _auto_detectar_metrica(df_fuzzy, var_tiempo):
@@ -738,9 +757,9 @@ def generar_informe(df_reglas: pd.DataFrame,
     Pipeline completo NLG: reglas + fuzzy → informe Markdown.
 
     Entrada:
-      df_reglas — CSV de reglas (salida de src02).
-      df_fuzzy  — CSV fuzzificado (salida de src01).
-      config    — NLGConfig con nombre_dataset, metrica, etc.
+      df_reglas: CSV de reglas (salida de src02).
+      df_fuzzy:  CSV fuzzificado (salida de src01).
+      config:    NLGConfig con nombre_dataset, metrica, etc.
 
     Salida:
       String Markdown con el informe completo.
@@ -770,10 +789,11 @@ def generar_informe(df_reglas: pd.DataFrame,
 
     return generar_resumen(
         df_reglas,
-        dataset          = dataset,
-        metrica          = metrica,
-        min_reglas_grupo = config.min_reglas_grupo,
-        bloques          = bloques,
+        dataset           = dataset,
+        metrica           = metrica,
+        min_reglas_grupo  = config.min_reglas_grupo,
+        bloques           = bloques,
         granularidad_desc = granularidad_desc,
         grupos_excluyentes = grupos_excluyentes,
+        config            = config,
     )

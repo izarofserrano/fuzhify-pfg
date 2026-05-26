@@ -1,0 +1,252 @@
+/* ═══════════════════════════════════════════════
+   Fuzhify — hoja de estilos para informe PDF
+   Tipografía: DejaVu Sans (incluida en fonts-dejavu-core)
+   Paleta de acento: YlOrRd (naranja-rojo cálido)
+   ═══════════════════════════════════════════════ */
+
+/* ── Cabecera corrida (running element para WeasyPrint) ── */
+.cabecera-corrida {
+  position: running(cabecera-corrida);
+  font-family: 'DejaVu Sans', Arial, sans-serif;
+  font-size: 8pt;
+  color: #9b9b9b;
+  text-align: center;
+  border-bottom: 0.5pt solid #e0e0e0;
+  padding-bottom: 3pt;
+}
+
+/* ── Tipografía base ── */
+body {
+  font-family: 'DejaVu Sans', Arial, sans-serif;
+  font-size: 10pt;
+  color: #1a1a1a;
+  line-height: 1.65;
+}
+
+/* ── Salto de página ── */
+.nueva-pagina {
+  break-before: page;
+}
+
+/* ═══════════════════════════════════════════════
+   PORTADA
+   ═══════════════════════════════════════════════ */
+.portada {
+  padding: 20pt 0 30pt;
+}
+.portada-inner {
+  max-width: 100%;
+}
+.portada-marca {
+  font-size: 30pt;
+  font-weight: 900;
+  color: #bd2a00;  /* extremo oscuro de YlOrRd */
+  letter-spacing: -0.03em;
+  margin-bottom: 6pt;
+}
+.portada-titulo {
+  font-size: 18pt;
+  font-weight: 400;
+  color: #333;
+  margin: 0 0 14pt;
+}
+.portada-linea {
+  width: 48pt;
+  height: 2.5pt;
+  background: #bd2a00;
+  margin-bottom: 20pt;
+}
+
+/* Tabla de metadatos de portada */
+.portada-meta {
+  border-collapse: collapse;
+  margin-bottom: 22pt;
+}
+.portada-meta td {
+  padding: 4pt 0;
+  vertical-align: top;
+}
+.meta-k {
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #888;
+  padding-right: 18pt;
+  white-space: nowrap;
+}
+.meta-v {
+  font-size: 11.5pt;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* Tabla de parámetros de portada */
+.portada-params-titulo {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin-bottom: 7pt;
+}
+.portada-params {
+  border-collapse: collapse;
+  background: #faf7f5;
+  border: 0.5pt solid #e5dbd6;
+  border-radius: 3pt;
+}
+.portada-params td {
+  padding: 3pt 10pt;
+  font-size: 9pt;
+}
+.param-k {
+  font-family: 'DejaVu Sans Mono', 'Courier New', monospace;
+  color: #555;
+  white-space: nowrap;
+}
+.param-sep {
+  color: #aaa;
+  padding: 3pt 4pt;
+}
+.param-v {
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* ═══════════════════════════════════════════════
+   SECCIONES
+   ═══════════════════════════════════════════════ */
+.seccion {
+  padding-top: 2pt;
+}
+.seccion-h2 {
+  font-size: 15pt;
+  font-weight: 800;
+  color: #bd2a00;
+  margin: 0 0 13pt;
+  padding-bottom: 6pt;
+  border-bottom: 1pt solid #e8d6ce;
+}
+
+/* ═══════════════════════════════════════════════
+   PROSA (markdown renderizado)
+   ═══════════════════════════════════════════════ */
+.prose h1 { font-size: 13pt; color: #1a1a1a; margin: 16pt 0 6pt; }
+.prose h2 { font-size: 12pt; color: #222;    margin: 14pt 0 5pt; }
+.prose h3 { font-size: 11pt; color: #333;    margin: 11pt 0 4pt; }
+.prose h4 { font-size: 10pt; color: #444;    margin: 9pt 0 3pt; }
+.prose p  { margin: 0 0 8pt; }
+
+.prose ul,
+.prose ol {
+  margin: 0 0 8pt 14pt;
+  padding: 0;
+}
+.prose li { margin-bottom: 3pt; }
+
+.prose blockquote {
+  margin: 8pt 0 10pt 0;
+  padding: 6pt 12pt;
+  border-left: 3pt solid #e8a080;
+  background: #fdf6f2;
+  color: #444;
+  font-size: 9.5pt;
+}
+.prose blockquote p { margin: 0 0 4pt; }
+.prose blockquote h3 { font-size: 10pt; margin: 0 0 4pt; color: #333; }
+
+.prose code {
+  font-family: 'DejaVu Sans Mono', 'Courier New', monospace;
+  font-size: 8.5pt;
+  background: #f2f2f2;
+  padding: 1pt 3pt;
+  border-radius: 2pt;
+}
+.prose pre {
+  background: #f2f2f2;
+  padding: 8pt;
+  border-radius: 3pt;
+  font-size: 8pt;
+  white-space: pre-wrap;
+  margin: 0 0 10pt;
+}
+
+/* Tablas dentro de la prosa */
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8.5pt;
+  margin: 8pt 0 12pt;
+}
+.prose thead th {
+  background: #fde8d8;
+  color: #7a2000;
+  font-weight: 700;
+  padding: 4pt 8pt;
+  text-align: left;
+  border: 0.5pt solid #e0c8be;
+}
+.prose tbody td {
+  padding: 3pt 8pt;
+  border: 0.5pt solid #eaeaea;
+}
+.prose tbody tr:nth-child(even) td { background: #fdf8f5; }
+
+.prose strong { font-weight: 700; }
+.prose em     { font-style: italic; }
+.prose hr     { border: none; border-top: 0.5pt solid #ddd; margin: 12pt 0; }
+
+/* ═══════════════════════════════════════════════
+   FIGURAS / GRÁFICOS
+   ═══════════════════════════════════════════════ */
+.figura {
+  margin: 14pt 0 18pt;
+  text-align: center;
+  break-inside: avoid;
+}
+.figura img {
+  max-width: 100%;
+  height: auto;
+  border: 0.5pt solid #e8ddd8;
+  border-radius: 3pt;
+}
+.figura figcaption {
+  font-size: 8.5pt;
+  color: #666;
+  margin-top: 5pt;
+  font-style: italic;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════
+   APÉNDICE — TABLA DE REGLAS
+   ═══════════════════════════════════════════════ */
+.apendice-intro {
+  font-size: 9pt;
+  color: #555;
+  margin-bottom: 10pt;
+}
+.tabla-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+.tabla-wrapper .tabla-reglas {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 8pt;
+}
+.tabla-reglas thead th {
+  background: #fde8d8;
+  color: #7a2000;
+  font-weight: 700;
+  padding: 4pt 6pt;
+  text-align: left;
+  border: 0.5pt solid #e0c8be;
+  white-space: nowrap;
+}
+.tabla-reglas tbody td {
+  padding: 3pt 6pt;
+  border: 0.5pt solid #eaeaea;
+  font-family: 'DejaVu Sans Mono', 'Courier New', monospace;
+  word-break: break-word;
+}
+.tabla-reglas tbody tr:nth-child(even) td { background: #fdf8f5; }

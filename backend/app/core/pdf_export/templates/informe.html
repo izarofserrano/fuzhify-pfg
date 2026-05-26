@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Informe Fuzhify: {{ nombre_dataset }}</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Pie de página dinámico (se genera en render time, no necesita JS) */
+    @page {
+      size: A4;
+      margin: 2cm;
+      @top-center {
+        content: element(cabecera-corrida);
+      }
+      @bottom-right {
+        content: "Página " counter(page) " de " counter(pages);
+        font-family: 'DejaVu Sans', Arial, sans-serif;
+        font-size: 8pt;
+        color: #9b9b9b;
+      }
+    }
+    /* La portada no lleva cabecera ni pie */
+    @page :first {
+      @top-center { content: ""; }
+      @bottom-right { content: ""; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Elemento de cabecera corrida (extraído del flujo por WeasyPrint) -->
+  <div class="cabecera-corrida">
+    Informe Fuzhify: {{ nombre_dataset }} &middot; {{ metrica }} &middot; {{ fecha }}
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       SECCIÓN 1 — PORTADA
+       ══════════════════════════════════════════════ -->
+  <section class="portada">
+    <div class="portada-inner">
+      <div class="portada-marca">Fuzhify</div>
+      <h1 class="portada-titulo">Informe de análisis difuso</h1>
+      <div class="portada-linea"></div>
+
+      <table class="portada-meta">
+        <tr>
+          <td class="meta-k">Dataset</td>
+          <td class="meta-v">{{ nombre_dataset }}</td>
+        </tr>
+        <tr>
+          <td class="meta-k">Métrica</td>
+          <td class="meta-v">{{ metrica }}</td>
+        </tr>
+        <tr>
+          <td class="meta-k">Fecha</td>
+          <td class="meta-v">{{ fecha }}</td>
+        </tr>
+      </table>
+
+      <div class="portada-params-titulo">Parámetros del análisis</div>
+      <table class="portada-params">
+        {% for clave, valor in parametros.items() %}
+        <tr>
+          <td class="param-k">{{ clave }}</td>
+          <td class="param-sep">=</td>
+          <td class="param-v">{{ valor }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       SECCIÓN 2 — RESUMEN EJECUTIVO
+       ══════════════════════════════════════════════ -->
+  <section class="seccion nueva-pagina">
+    <h2 class="seccion-h2">Resumen ejecutivo</h2>
+    <div class="prose">{{ resumen_html }}</div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       SECCIÓN 3 — ANÁLISIS COMPLETO
+       ══════════════════════════════════════════════ -->
+  <section class="seccion nueva-pagina">
+    <h2 class="seccion-h2">Análisis completo</h2>
+    <div class="prose">{{ cuerpo_html }}</div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       SECCIÓN 4 — VISUALIZACIONES
+       ══════════════════════════════════════════════ -->
+  <section class="seccion nueva-pagina">
+    <h2 class="seccion-h2">Visualizaciones</h2>
+
+    <figure class="figura">
+      <img src="{{ img_scatter }}" alt="Soporte, Confianza y Lift">
+      <figcaption>
+        <strong>Figura 1.</strong> Dispersión de reglas:
+        soporte (eje X) vs. confianza (eje Y), coloreadas por lift (paleta YlOrRd).
+      </figcaption>
+    </figure>
+
+    <figure class="figura">
+      <img src="{{ img_top15 }}" alt="Top 15 reglas por lift">
+      <figcaption>
+        <strong>Figura 2.</strong> Las 15 reglas con mayor lift,
+        ordenadas de mayor a menor.
+      </figcaption>
+    </figure>
+
+    <figure class="figura">
+      <img src="{{ img_fuzzy }}" alt="Fuzzificación de la métrica">
+      <figcaption>
+        <strong>Figura 3.</strong> Proporción de activación de cada
+        variable difusa de la métrica <em>{{ metrica }}</em>.
+      </figcaption>
+    </figure>
+  </section>
+
+  <!-- ══════════════════════════════════════════════
+       SECCIÓN 5 — APÉNDICE: TOP 20 REGLAS
+       ══════════════════════════════════════════════ -->
+  <section class="seccion nueva-pagina">
+    <h2 class="seccion-h2">Apéndice: Top 20 reglas por lift</h2>
+    <p class="apendice-intro">
+      Las siguientes reglas son las 20 con mayor lift del análisis, ordenadas de mayor a menor.
+    </p>
+    <div class="tabla-wrapper">
+      {{ tabla_reglas_html }}
+    </div>
+  </section>
+
+</body>
+</html>

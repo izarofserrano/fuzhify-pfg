@@ -4,7 +4,7 @@
 
 # ── 3a. Etiquetas legibles para cada token temporal ────────────────────────
 ETIQUETA_TEMPORAL = {
-    # Años — rango 2000-2050 para cubrir cualquier dataset
+    # Años: rango 2000-2050 para cubrir cualquier dataset
     **{f"t_{y}": f"el año {y}" for y in range(2000, 2051)},
     # Meses
     "t_Ene": "enero",    "t_Feb": "febrero",  "t_Marz": "marzo",
@@ -35,7 +35,7 @@ ETIQUETA_TEMPORAL = {
     "t_Invierno":  "invierno",
     # Festivos
     "t_Festivo":   "días festivos",
-    # Minutos — cuartos de hora
+    # Minutos: cuartos de hora
     "t_M00": "el primer cuarto de hora (minutos 0–14)",
     "t_M15": "el segundo cuarto de hora (minutos 15–29)",
     "t_M30": "el tercer cuarto de hora (minutos 30–44)",
@@ -117,13 +117,13 @@ NIVEL_COLOQUIAL = {
     "v_OutlierBajo": "excepcionalmente bajo (un valle)",
 }
 NIVEL_EMOJI = {
-    "v_OutlierAlto": "🔴",
-    "v_MuyAlta":     "🟠",
-    "v_Alta":        "🟡",
-    "v_Media":       "🟢",
-    "v_Baja":        "🔵",
-    "v_MuyBaja":     "🟣",
-    "v_OutlierBajo": "⚪",
+    "v_OutlierAlto": "",
+    "v_MuyAlta":     "",
+    "v_Alta":        "",
+    "v_Media":       "",
+    "v_Baja":        "",
+    "v_MuyBaja":     "",
+    "v_OutlierBajo": "",
 }
 NIVEL_PESO = {
     "v_OutlierAlto": 7, "v_MuyAlta": 6, "v_Alta": 5,

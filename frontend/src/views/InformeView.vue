@@ -16,6 +16,13 @@
         >
           Descargar .md
         </a>
+        <a
+          :href="`${apiBase}/jobs/${jobId}/informe.pdf`"
+          target="_blank"
+          class="btn-secondary"
+        >
+          Descargar PDF
+        </a>
       </div>
     </div>
 
@@ -76,7 +83,7 @@ onMounted(async () => {
 .informe-view { display: flex; flex-direction: column; gap: 20px; }
 
 .page-header { display: flex; align-items: flex-start; gap: 16px; }
-.header-actions { margin-left: auto; }
+.header-actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
 
 .btn-back {
   flex-shrink: 0;

@@ -25,6 +25,9 @@ dist/
 .env
 .env.local
 
+# Override de Docker Compose (configuración local de dev, no versionar)
+docker-compose.override.yml
+
 # Notebooks: checkpoints sí se ignoran, los .ipynb NO
 .ipynb_checkpoints/
 

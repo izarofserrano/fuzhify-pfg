@@ -176,7 +176,7 @@ def verbalizar_antecedente(tokens):
 
 
 # ---------------------------------------------------------------------------
-# Escala adverbial — umbrales de lift fijados por el usuario
+# Escala adverbial: umbrales de lift fijados por el usuario
 # ---------------------------------------------------------------------------
 
 def adverbio_por_lift(lift):

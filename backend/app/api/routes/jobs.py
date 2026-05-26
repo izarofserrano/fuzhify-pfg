@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.core.fuzzy import FuzzyConfig, detectar_metricas_candidatas
 from app.core.global_report import construir_informe_global
+from app.core.pdf_export import generar_pdf_informe
 from app.db import AsyncSessionLocal, get_db
 from app.models.job import Job
 from app.schemas.job import (
@@ -291,7 +292,45 @@ async def descargar_archivo(
     )
 
 
-# ── 8. Informe global comparativo ─────────────────────────────────────────────
+# ── 8. Informe en PDF ────────────────────────────────────────────────────────
+
+@router.get("/jobs/{job_id}/informe.pdf")
+async def descargar_informe_pdf(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_db),
+):
+    """Genera y descarga el informe en PDF (solo si el job está completado)."""
+    job = await _get_job_or_404(session, job_id)
+
+    if job.estado != "completado":
+        raise HTTPException(status_code=409, detail="El job no está completado")
+
+    # Acceder a todos los atributos necesarios dentro de la sesión (evita lazy-load en el thread)
+    ruta_reglas = job.ruta_csv_reglas
+    ruta_fuzzy  = job.ruta_csv_fuzzy
+    ruta_md     = job.ruta_informe_md
+
+    if not ruta_reglas or not ruta_fuzzy or not ruta_md:
+        raise HTTPException(status_code=409, detail="Faltan archivos del job para generar el PDF")
+
+    try:
+        pdf_bytes = await asyncio.to_thread(generar_pdf_informe, job)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Error al generar el PDF: {exc}")
+
+    nombre_base = f"{job.nombre_dataset}_{job.metrica_seleccionada}_informe.pdf"
+    nombre_archivo = nombre_base.replace(" ", "_").replace("/", "_")
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{nombre_archivo}"',
+        },
+    )
+
+
+# ── 9. Informe global comparativo ─────────────────────────────────────────────
 
 @router.post("/informe-global")
 async def informe_global(

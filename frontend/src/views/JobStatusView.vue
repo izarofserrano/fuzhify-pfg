@@ -79,6 +79,13 @@
               Descargar .md
             </a>
             <a
+              :href="`${apiBase}/jobs/${jobId}/informe.pdf`"
+              target="_blank"
+              class="btn-secondary"
+            >
+              Descargar PDF
+            </a>
+            <a
               :href="`${apiBase}/jobs/${jobId}/descargar/reglas`"
               target="_blank"
               class="btn-secondary"

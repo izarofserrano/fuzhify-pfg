@@ -1,0 +1,23 @@
+# docker-compose.override.yml.example
+#
+# Comodidades para desarrollo local.
+# Uso:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#
+# Docker Compose carga docker-compose.override.yml automáticamente
+# junto con docker-compose.yml, sin ningún flag extra.
+# El fichero .override.yml NO se versiona (.gitignore).
+
+services:
+  backend:
+    # El Dockerfile ya arranca uvicorn con --reload.
+    # El volumen ./backend:/app está en docker-compose.yml.
+    environment:
+      LOG_LEVEL: debug
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+
+  frontend:
+    # Pasa la URL del backend al cliente Vite en tiempo de build/dev.
+    environment:
+      VITE_API_URL: http://localhost:8001
