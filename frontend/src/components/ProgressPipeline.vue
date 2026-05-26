@@ -35,14 +35,14 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 // Recibe estado y fase_actual del job desde el padre
 import { computed } from 'vue'
 
-const props = defineProps<{
-  estado: string
-  faseActual: string | null
-}>()
+const props = defineProps({
+  estado: String,
+  faseActual: { type: String, default: null },
+})
 
 // Orden y metadatos de las fases
 const fases = [
@@ -52,7 +52,7 @@ const fases = [
 ]
 
 // Estado de cada nodo: 'pending' | 'active' | 'done'
-function estadoFase(faseId: string): 'pending' | 'active' | 'done' {
+function estadoFase(faseId) {
   if (props.estado === 'completado') return 'done'
   if (props.estado === 'error')      return 'pending'
 
@@ -69,7 +69,7 @@ function estadoFase(faseId: string): 'pending' | 'active' | 'done' {
 const progresoTotal = computed(() => {
   if (props.estado === 'completado') return 100
   if (props.estado === 'error')      return 0
-  const map: Record<string, number> = {
+  const map = {
     fuzzificacion: 20,
     mineria:       55,
     nlg:           85,

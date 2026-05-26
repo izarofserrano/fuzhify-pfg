@@ -109,41 +109,40 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/client'
-import type { ReglaItem, ReglasResponse } from '@/api/client'
 
 const route  = useRoute()
 const router = useRouter()
 
-const jobId   = computed(() => route.params.id as string)
-const apiBase = import.meta.env.VITE_API_URL as string
+const jobId   = computed(() => route.params.id)
+const apiBase = import.meta.env.VITE_API_URL
 
 const LIMIT = 50
 
 const cargando = ref(true)
 const error    = ref('')
-const items    = ref<ReglaItem[]>([])
+const items    = ref([])
 const total    = ref(0)
 const offset   = ref(0)
 const filtroConsecuente = ref('')
 
 // Lista de consecuentes únicos para el filtro (se rellena con la primera carga)
-const consecuentesUnicos = ref<string[]>([])
+const consecuentesUnicos = ref([])
 
 async function cargarReglas() {
   cargando.value = true
   error.value = ''
   try {
-    const params: Record<string, string | number> = {
+    const params = {
       limit:  LIMIT,
       offset: offset.value,
     }
     if (filtroConsecuente.value) params.consecuente = filtroConsecuente.value
 
-    const { data } = await api.get<ReglasResponse>(`/jobs/${jobId.value}/reglas`, { params })
+    const { data } = await api.get(`/jobs/${jobId.value}/reglas`, { params })
     items.value = data.items
     total.value = data.total
 
@@ -152,7 +151,7 @@ async function cargarReglas() {
       const unicos = [...new Set(data.items.map(r => r.consecuente))].sort()
       consecuentesUnicos.value = unicos
     }
-  } catch (e: any) {
+  } catch (e) {
     error.value = e.response?.data?.detail ?? 'Error al cargar las reglas'
   } finally {
     cargando.value = false
@@ -164,13 +163,13 @@ function onFiltroChange() {
   cargarReglas()
 }
 
-function irPagina(nuevoOffset: number) {
+function irPagina(nuevoOffset) {
   offset.value = Math.max(0, nuevoOffset)
   cargarReglas()
 }
 
 // Color del lift según la escala adverbial de src03
-function liftClass(lift: number): string {
+function liftClass(lift) {
   if (lift >= 3.0) return 'lift-muy-alto'
   if (lift >= 2.0) return 'lift-alto'
   if (lift >= 1.5) return 'lift-medio'

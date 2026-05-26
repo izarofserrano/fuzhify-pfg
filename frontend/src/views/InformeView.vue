@@ -46,7 +46,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MarkdownIt from 'markdown-it'
@@ -55,8 +55,8 @@ import api from '@/api/client'
 const route  = useRoute()
 const router = useRouter()
 
-const jobId   = computed(() => route.params.id as string)
-const apiBase = import.meta.env.VITE_API_URL as string
+const jobId   = computed(() => route.params.id)
+const apiBase = import.meta.env.VITE_API_URL
 
 const cargando    = ref(true)
 const error       = ref('')
@@ -67,11 +67,11 @@ const htmlRendered = computed(() => md.render(markdownRaw.value))
 
 onMounted(async () => {
   try {
-    const { data } = await api.get<string>(`/jobs/${jobId.value}/informe`, {
+    const { data } = await api.get(`/jobs/${jobId.value}/informe`, {
       responseType: 'text',
     })
     markdownRaw.value = data
-  } catch (e: any) {
+  } catch (e) {
     error.value = e.response?.data?.detail ?? 'No se pudo cargar el informe'
   } finally {
     cargando.value = false

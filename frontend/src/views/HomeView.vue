@@ -212,27 +212,26 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/api/client'
-import type { DetectMetricResponse, ParametrosPipeline } from '@/api/client'
 import MetricaModal from '@/components/MetricaModal.vue'
 
 const router = useRouter()
 
 // ── Estado local ──
-const inputRef = ref<HTMLInputElement | null>(null)
-const archivoSeleccionado = ref<File | null>(null)
+const inputRef = ref(null)
+const archivoSeleccionado = ref(null)
 const dragging   = ref(false)
 const cargando   = ref(false)
 const lanzando   = ref(false)
 const error      = ref('')
 const showModal  = ref(false)
-const detectResult = ref<DetectMetricResponse | null>(null)
+const detectResult = ref(null)
 
 // Parámetros con valores por defecto
-const params = reactive<ParametrosPipeline>({
+const params = reactive({
   min_soporte:       0.005,
   min_confianza:     0.50,
   lift_minimo:       1.5,
@@ -245,7 +244,7 @@ const params = reactive<ParametrosPipeline>({
 })
 
 // ── Handlers de archivo ──
-function onDrop(e: DragEvent) {
+function onDrop(e) {
   dragging.value = false
   const f = e.dataTransfer?.files[0]
   if (f && f.name.endsWith('.csv')) {
@@ -255,8 +254,8 @@ function onDrop(e: DragEvent) {
   }
 }
 
-function onFileChange(e: Event) {
-  const f = (e.target as HTMLInputElement).files?.[0]
+function onFileChange(e) {
+  const f = e.target.files?.[0]
   if (f) archivoSeleccionado.value = f
 }
 
@@ -265,7 +264,7 @@ function limpiarArchivo() {
   if (inputRef.value) inputRef.value.value = ''
 }
 
-function formatBytes(bytes: number): string {
+function formatBytes(bytes) {
   if (bytes < 1024)       return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
@@ -284,13 +283,13 @@ async function detectarMetrica() {
     const paramsEnvio = { ...params, subdiv: params.subdiv || null }
     form.append('parametros', JSON.stringify(paramsEnvio))
 
-    const { data } = await api.post<DetectMetricResponse>('/detect-metric', form, {
+    const { data } = await api.post('/detect-metric', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
 
     detectResult.value = data
     showModal.value = true
-  } catch (e: any) {
+  } catch (e) {
     error.value = e.response?.data?.detail ?? 'Error al procesar el archivo'
   } finally {
     cargando.value = false
@@ -298,7 +297,7 @@ async function detectarMetrica() {
 }
 
 // ── Paso 2: lanzar pipeline ──
-async function lanzarPipeline(metricaSeleccionada: string) {
+async function lanzarPipeline(metricaSeleccionada) {
   if (!detectResult.value) return
   lanzando.value = true
   error.value = ''
@@ -312,7 +311,7 @@ async function lanzarPipeline(metricaSeleccionada: string) {
 
     showModal.value = false
     router.push({ name: 'job-status', params: { id: detectResult.value.job_id } })
-  } catch (e: any) {
+  } catch (e) {
     error.value = e.response?.data?.detail ?? 'Error al lanzar el análisis'
     lanzando.value = false
   }

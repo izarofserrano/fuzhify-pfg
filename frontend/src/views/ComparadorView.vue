@@ -103,14 +103,13 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue'
 import MarkdownIt from 'markdown-it'
 import api from '@/api/client'
-import type { JobStatus } from '@/api/client'
 
-const jobs          = ref<JobStatus[]>([])
-const seleccionados = ref<string[]>([])
+const jobs          = ref([])
+const seleccionados = ref([])
 const cargandoJobs  = ref(true)
 const errorJobs     = ref('')
 const generando     = ref(false)
@@ -123,11 +122,11 @@ const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
 // Carga los jobs completados
 onMounted(async () => {
   try {
-    const { data } = await api.get<JobStatus[]>('/jobs', {
+    const { data } = await api.get('/jobs', {
       params: { estado: 'completado', limit: 20 },
     })
     jobs.value = data
-  } catch (e: any) {
+  } catch (e) {
     errorJobs.value = e.response?.data?.detail ?? 'Error al cargar los análisis'
   } finally {
     cargandoJobs.value = false
@@ -142,13 +141,13 @@ async function generarInforme() {
   informeRaw.value = ''
 
   try {
-    const { data } = await api.post<string>('/informe-global',
+    const { data } = await api.post('/informe-global',
       { job_ids: seleccionados.value },
       { responseType: 'text' }
     )
     informeRaw.value = data
     informeHtml.value = md.render(data)
-  } catch (e: any) {
+  } catch (e) {
     errorInforme.value = e.response?.data?.detail ?? 'Error al generar el informe'
   } finally {
     generando.value = false
@@ -166,7 +165,7 @@ function descargarInforme() {
   URL.revokeObjectURL(url)
 }
 
-function formatFecha(iso: string) {
+function formatFecha(iso) {
   return new Date(iso).toLocaleString('es-ES', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
@@ -174,7 +173,7 @@ function formatFecha(iso: string) {
 }
 
 // El nombre del dataset no está en JobStatus, usamos el id truncado como fallback
-function nombreDataset(job: JobStatus): string {
+function nombreDataset(job) {
   return `Job ${job.id.substring(0, 8)}…`
 }
 </script>

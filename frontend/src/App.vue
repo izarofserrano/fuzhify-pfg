@@ -33,7 +33,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 // App.vue: shell de la aplicación con nav y router-view
 </script>
 

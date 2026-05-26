@@ -61,24 +61,20 @@
   </Teleport>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed } from 'vue'
-import type { MetricaCandidata } from '@/api/client'
 
-const props = defineProps<{
-  candidatas: MetricaCandidata[]
-  varTiempo: string
-  granularidadS: number
-  cargando: boolean
-}>()
+const props = defineProps({
+  candidatas: Array,
+  varTiempo: String,
+  granularidadS: Number,
+  cargando: Boolean,
+})
 
-const emit = defineEmits<{
-  (e: 'cancelar'): void
-  (e: 'confirmar', metrica: string): void
-}>()
+const emit = defineEmits(['cancelar', 'confirmar'])
 
 // Preseleccionar la candidata sugerida
-const seleccionada = ref<string>(
+const seleccionada = ref(
   props.candidatas.find(c => c.sugerida)?.nombre ?? props.candidatas[0]?.nombre ?? ''
 )
 

@@ -124,34 +124,33 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '@/api/client'
-import type { JobStatus } from '@/api/client'
 import ProgressPipeline from '@/components/ProgressPipeline.vue'
 
 const route  = useRoute()
 const router = useRouter()
 
-const jobId  = computed(() => route.params.id as string)
-const job    = ref<JobStatus | null>(null)
+const jobId  = computed(() => route.params.id)
+const job    = ref(null)
 const error  = ref('')
-const apiBase = import.meta.env.VITE_API_URL as string
+const apiBase = import.meta.env.VITE_API_URL
 
 // Polling
-let intervalo: ReturnType<typeof setInterval> | null = null
+let intervalo = null
 const INTERVALO_MS = 2000
 
 async function fetchJob() {
   try {
-    const { data } = await api.get<JobStatus>(`/jobs/${jobId.value}`)
+    const { data } = await api.get(`/jobs/${jobId.value}`)
     job.value = data
     // Detener polling si ya terminó
     if (data.estado === 'completado' || data.estado === 'error') {
       pararPolling()
     }
-  } catch (e: any) {
+  } catch (e) {
     error.value = e.response?.data?.detail ?? 'No se pudo consultar el job'
     pararPolling()
   }
@@ -184,7 +183,7 @@ const estaEnProceso = computed(() =>
 )
 
 const etiquetaEstado = computed(() => {
-  const map: Record<string, string> = {
+  const map = {
     esperando_metrica: 'Esperando métrica',
     pendiente:         'En cola',
     fuzzificacion:     'Fuzzificando',
@@ -211,7 +210,7 @@ const horaActualizado = computed(() => {
   return new Date(job.value.actualizado_en).toLocaleTimeString('es-ES')
 })
 
-function formatFecha(iso: string) {
+function formatFecha(iso) {
   return new Date(iso).toLocaleString('es-ES')
 }
 
