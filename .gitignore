@@ -1,7 +1,9 @@
 # Datos (los CSVs grandes nunca van a git)
 data/raw/
 data/notebook_outputs/
+
 data/jobs/
+**/data/jobs/
 
 # Pero sí queremos los fixtures de test
 !tests/fixtures/
