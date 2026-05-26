@@ -1,99 +1,79 @@
 # Fuzhify
 
-Sistema de generación automática de resúmenes lingüísticos sobre series temporales. A partir de un CSV con medidas de un sensor, el pipeline aplica lógica difusa para codificar el tiempo y la métrica, extrae reglas de asociación mediante búsqueda en haz y produce un informe técnico en Markdown con lenguaje natural estructurado.
+Sistema de generación automática de resúmenes en lenguaje natural
+sobre series temporales mediante lógica difusa y minería de reglas
+de asociación. Proyecto Fin de Grado — Grado en Ingeniería
+Informática, Universidad de Deusto.
 
-## Pipeline
+## Descripción
 
-```
-CSV de entrada
-     │
-     ▼
-┌──────────────────────────────────────────────┐
-│  Paso 1 – POST /api/v1/detect-metric         │
-│  detecta columna temporal y métricas         │
-│  candidatas; crea job «esperando_metrica»    │
-└──────────────────┬───────────────────────────┘
-                   │  usuario confirma métrica en el modal
-                   ▼
-┌──────────────────────────────────────────────┐
-│  Paso 2 – POST /api/v1/jobs/{id}/run         │
-│  confirma métrica → lanza BackgroundTask     │
-└──────────────────┬───────────────────────────┘
-                   │
-     ┌─────────────▼──────────────────────────────┐
-     │  asyncio.to_thread  (CPU-bound)            │
-     │                                            │
-     │  Fase 1  fuzzificación    →  fuzzy.csv     │
-     │    │                                       │
-     │  Fase 2  minería de reglas →  reglas.csv   │
-     │    │                                       │
-     │  Fase 3  NLG              →  informe.md    │
-     └────────────────────────────────────────────┘
-                   │
-     Frontend polling  GET /api/v1/jobs/{id}
-     hasta  estado = «completado»
-```
+Fuzhify recibe como entrada un fichero CSV con medidas de un sensor
+o contador (tráfico, ocupación, consumo eléctrico…) y produce
+automáticamente un informe técnico en lenguaje natural. El usuario
+no necesita programar ni configurar umbrales: sube el CSV, elige
+qué variable analizar y el sistema hace el resto.
+
+El proceso se divide en tres fases encadenadas. Primero, la
+**fuzzificación** (src01) codifica el tiempo y la métrica en variables
+lingüísticas difusas: horas del día, franjas horarias, días de la
+semana, festivos, estaciones, quincenas, etc. A continuación, la
+**minería de reglas** (src02) aplica un algoritmo de búsqueda en haz
+para extraer asociaciones del tipo «cuando es tarde por la noche en
+laborable, la ocupación suele ser alta». Por último, el módulo de
+**generación de lenguaje natural** (src03) agrupa las reglas por patrón
+semántico y redacta párrafos en castellano listos para incluir en un
+informe técnico o una memoria de TFG.
+
+El sistema también incluye un **comparador** (src04) que recibe varios
+análisis completados y genera un informe global que destaca patrones
+comunes, anomalías y diferencias entre conjuntos de datos. Toda la
+lógica analítica está portada directamente desde notebooks de referencia
+(Jupyter) y verificada mediante tests de paridad que garantizan
+resultados idénticos.
 
 ## Requisitos
 
-- Docker Desktop >= 24
-- Docker Compose >= 2.24
+- Docker Desktop
+- Git
 
-## Levantar el proyecto
+No se necesita Python ni Node.js instalados localmente.
+Todo corre dentro de los contenedores.
+
+## Levantar el proyecto en local
 
 ```bash
-# 1. Variables de entorno (solo la primera vez)
+git clone <url-del-repo>
+cd fuzhify-pfg
+
+# Copiar variables de entorno
 cp backend/.env.example .env
+cp frontend/.env.example frontend/.env.local
 
-# 2. Construir e iniciar los tres servicios
+# Levantar los 3 servicios
 docker compose up --build
+
+# En otra terminal, aplicar la migración de base de datos
+docker compose exec backend alembic upgrade head
 ```
 
-| Servicio   | URL                         |
-|------------|-----------------------------|
-| Frontend   | http://localhost:5173       |
-| Backend    | http://localhost:8001       |
-| API docs   | http://localhost:8001/docs  |
-| PostgreSQL | localhost:5432              |
+La aplicación estará disponible en:
+- Frontend: http://localhost:5173
+- API: http://localhost:8001/api/v1
+- Documentación API: http://localhost:8001/docs
 
-## Correr los tests
+## Correr los tests de paridad
 
 ```bash
-docker compose exec backend pytest
+docker compose exec backend pytest tests/ -v
 ```
 
-Un módulo concreto con salida detallada:
+Para un módulo concreto:
 
 ```bash
 docker compose exec backend pytest tests/test_paridad_fuzzy.py -v
-```
-
-## Variables de entorno
-
-Fichero: `.env` en la raíz del repo (copiar desde `backend/.env.example`).
-
-| Variable            | Descripción                        | Valor por defecto |
-|---------------------|------------------------------------|-------------------|
-| `POSTGRES_USER`     | Usuario de PostgreSQL              | `fuzhify`         |
-| `POSTGRES_PASSWORD` | Contraseña de PostgreSQL           | `fuzhify`         |
-| `POSTGRES_DB`       | Nombre de la base de datos         | `fuzhify`         |
-| `DATABASE_URL`      | URL de conexión asyncpg (derivada) | *(construida por compose)* |
-
-## Cargar datos de ejemplo
-
-Coloca CSVs de prueba en `data/raw/` y ejecuta:
-
-```bash
-bash seed/cargar_ejemplos.sh
-```
-
-Los archivos se copian a `data/` para subirlos desde la interfaz o via API.
-
-## Parar los servicios
-
-```bash
-docker compose down        # para los contenedores
-docker compose down -v     # elimina también el volumen de PostgreSQL
+docker compose exec backend pytest tests/test_paridad_mining.py -v
+docker compose exec backend pytest tests/test_paridad_nlg.py -v
+docker compose exec backend pytest tests/test_paridad_global.py -v
 ```
 
 ## Estructura del proyecto
@@ -102,49 +82,95 @@ docker compose down -v     # elimina también el volumen de PostgreSQL
 fuzhify-pfg/
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/        # Endpoints FastAPI (health, jobs)
+│   │   ├── api/routes/
+│   │   │   ├── health.py              ← healthcheck
+│   │   │   └── jobs.py                ← endpoints de jobs y pipeline
 │   │   ├── core/
-│   │   │   ├── fuzzy/         # Fase 1 – fuzzificación
-│   │   │   ├── mining/        # Fase 2 – minería de reglas (beam search)
-│   │   │   ├── nlg/           # Fase 3 – generación de lenguaje natural
-│   │   │   └── global_report/ # Fase 4 – informe multi-sensor
-│   │   ├── models/            # ORM SQLAlchemy (tabla jobs)
-│   │   ├── schemas/           # Validación Pydantic
-│   │   └── services/          # Orquestación del pipeline
-│   ├── data/jobs/             # Archivos por job (generado en runtime)
-│   ├── tests/                 # Tests de paridad con los notebooks
-│   └── Dockerfile
+│   │   │   ├── fuzzy/                 ← Fase 1: fuzzificación (src01)
+│   │   │   ├── mining/                ← Fase 2: minería beam search (src02)
+│   │   │   ├── nlg/                   ← Fase 3: lenguaje natural (src03)
+│   │   │   ├── global_report/         ← Fase 4: informe comparativo (src04)
+│   │   │   └── pdf_export/            ← exportación a PDF con WeasyPrint
+│   │   ├── models/                    ← ORM SQLAlchemy (tabla jobs)
+│   │   ├── schemas/                   ← validación Pydantic
+│   │   ├── services/                  ← orquestación del pipeline
+│   │   ├── config.py                  ← configuración vía variables de entorno
+│   │   ├── db.py                      ← motor async y sesiones SQLAlchemy
+│   │   └── main.py                    ← aplicación FastAPI
+│   ├── tests/
+│   │   ├── test_paridad_fuzzy.py      ← paridad src01 (3 datasets)
+│   │   ├── test_paridad_mining.py     ← paridad src02 (3 datasets)
+│   │   ├── test_paridad_nlg.py        ← paridad src03 (módulo genérico)
+│   │   └── test_paridad_global.py     ← paridad src04
+│   ├── alembic/                       ← migraciones de base de datos
+│   ├── Dockerfile
+│   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── views/             # Home, JobStatus, Informe, Reglas, Comparador
-│   │   ├── components/        # MetricaModal, ProgressPipeline
-│   │   └── stores/            # Estado Pinia (jobs)
-│   └── Dockerfile
-├── notebooks/                 # Implementaciones de referencia (src01–src04)
-├── data/
-│   └── raw/                   # CSVs de prueba (no versionados)
-├── seed/
-│   └── cargar_ejemplos.sh     # Copia data/raw/*.csv → data/
+│   │   ├── api/client.js              ← cliente Axios con baseURL configurable
+│   │   ├── components/
+│   │   │   ├── MetricaModal.vue       ← modal de selección de métrica
+│   │   │   └── ProgressPipeline.vue   ← barra de progreso por fases
+│   │   ├── router/index.js            ← rutas de la SPA
+│   │   ├── stores/jobs.js             ← estado global con Pinia
+│   │   └── views/                     ← Home, JobStatus, Informe, Reglas, Comparador
+│   ├── Dockerfile
+│   └── package.json
+├── notebooks/                         ← implementaciones de referencia (src01–src04)
 ├── docker-compose.yml
-├── docker-compose.override.yml.example
-├── ARQUITECTURA.md
-└── .env                       # No versionado — copiar de backend/.env.example
+├── ARQUITECTURA.md                    ← diagramas y decisiones de diseño
+└── CONTEXTO.md                        ← guía de desarrollo del TFG
 ```
 
-## Deuda técnica conocida
+## Pipeline de análisis
 
-Los `print()` listados a continuación están en módulos del pipeline que en producción corren dentro del servidor. Deberían convertirse a `logger.debug()` pero no afectan al funcionamiento.
+```
+CSV de entrada (sensor)
+        │
+        ▼
+POST /api/v1/detect-metric
+  ├── detecta columna temporal (4 estrategias automáticas)
+  ├── detecta métricas candidatas (heurística estadística)
+  └── crea job  →  estado: esperando_metrica
+        │
+        │  usuario confirma métrica en el modal
+        ▼
+POST /api/v1/jobs/{id}/run
+  └── lanza BackgroundTask  →  estado: pendiente
+        │
+        ├──► Fase 1 — Fuzzificación (src01)
+        │       columnas t_* (franja, día, mes, festivo…)
+        │       columnas v_* (nivel alto/bajo/medio…)
+        │       → fuzzy.csv
+        │
+        ├──► Fase 2 — Minería de reglas (src02)
+        │       beam search con poda por confianza
+        │       filtra y ordena por lift
+        │       → reglas.csv  [antecedente, consecuente, soporte, confianza, lift]
+        │
+        └──► Fase 3 — Lenguaje natural (src03)
+                agrupa reglas por franja horaria y tipo de día
+                verbaliza con escala adverbial (lift → adverbio)
+                → informe.md
 
-**`core/fuzzy/pipeline.py`** — L173, L177, L189, L197, L201-202, L207, L212, L214-215, L217, L236
-Trazas de detección de `var_tiempo` / `var_metrica` y fallback LLM.
+Frontend: polling GET /api/v1/jobs/{id} cada 2 s hasta estado=completado
+```
 
-**`core/fuzzy/heuristic.py`** — L77, L81, L84, L137, L146-147, L149, L152, L183, L202-203, L206, L215, L224, L231, L236
-Trazas del módulo heurístico (detección de columna temporal y llamadas al LLM).
+## Stack tecnológico
 
-**`core/fuzzy/blocks.py`** — L162, L165, L469
-Avisos sobre la librería `holidays` y columnas constantes eliminadas.
-
-**`core/nlg/pipeline.py`** — L583
-Recuento de reglas eliminadas por combinación inválida.
-
-> Los `print()` en `*/run.py` son **intencionales**: son scripts CLI independientes y su salida es el feedback de progreso al usuario.
+| Capa           | Tecnología              | Versión  | Función                                      |
+|----------------|-------------------------|----------|----------------------------------------------|
+| API            | FastAPI + Uvicorn       | latest   | Framework web async + servidor ASGI          |
+| ORM            | SQLAlchemy (async)      | latest   | Acceso a BD con asyncpg                      |
+| Base de datos  | PostgreSQL              | 16       | Persistencia de jobs y metadatos             |
+| Migraciones    | Alembic                 | latest   | Versionado del esquema de BD                 |
+| Análisis       | pandas + numpy          | latest   | Procesamiento de series temporales           |
+| Festivos       | holidays                | ≥ 0.97   | Detección de festivos por país/subdivisión   |
+| PDF            | WeasyPrint + Jinja2     | latest   | Exportación del informe a PDF                |
+| Frontend       | Vue 3                   | 3.4.0    | SPA con componentes reactivos                |
+| Build          | Vite                    | 5.2.0    | Bundler del frontend                         |
+| Estado         | Pinia                   | 3.0.4    | Store reactivo global                        |
+| Enrutado       | Vue Router              | 4.6.4    | Navegación en la SPA                         |
+| HTTP           | Axios                   | 1.7.0    | Cliente HTTP del frontend                    |
+| Infraestructura| Docker Compose          | v2       | Orquestación de tres contenedores            |
+| Tests          | pytest                  | latest   | Tests de paridad contra notebooks originales |
