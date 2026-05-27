@@ -178,6 +178,14 @@
             />
           </div>
 
+          <!-- USAR_LLM_SINTESIS -->
+          <div class="param-group param-group--full">
+            <label class="field-label field-label--check">
+              <input type="checkbox" v-model="params.usar_llm_sintesis" />
+              Mejorar informe con IA (requiere API key configurada)
+            </label>
+          </div>
+
         </div>
       </section>
     </div>
@@ -241,6 +249,7 @@ const params = reactive({
   pais:              'ES',
   subdiv:            null,
   min_reglas_grupo:  2,
+  usar_llm_sintesis: false,
 })
 
 // ── Handlers de archivo ──

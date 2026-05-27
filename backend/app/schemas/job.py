@@ -39,6 +39,7 @@ class ParametrosPipeline(BaseModel):
     pais: str = "ES"
     subdiv: str | None = None
     min_reglas_grupo: int = 2
+    usar_llm_sintesis: bool = False
 
 
 class RunJobRequest(BaseModel):

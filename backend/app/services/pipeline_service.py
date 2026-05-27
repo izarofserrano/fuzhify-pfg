@@ -12,6 +12,7 @@ from uuid import UUID
 
 import pandas as pd
 
+from app.config import settings
 from app.core.fuzzy import FuzzyConfig, fuzzificar
 from app.core.mining import MinerConfig, minar_reglas
 from app.core.nlg import NLGConfig, generar_informe
@@ -111,6 +112,9 @@ async def ejecutar_pipeline(job_id: UUID) -> None:
                 nombre_dataset=nombre_dataset,
                 metrica=metrica or "",
                 min_reglas_grupo=int(parametros.get("min_reglas_grupo", 2)),
+                usar_llm_sintesis=bool(parametros.get("usar_llm_sintesis", False)),
+                proveedor_llm=parametros.get("proveedor_llm", "gemini"),
+                llm_api_key=settings.gemini_api_key or None,
             )
             return generar_informe(_dr, _df, cfg)
 

@@ -321,3 +321,43 @@ def agrupar_reglas(df_consecuente, umbral_solapamiento=0.4):
         grupos.append(grupo_actual)
 
     return grupos
+
+
+def sintetizar_bloque_con_llm(
+    bloque_texto: str,
+    nombre_metrica: str,
+    config,
+) -> str | None:
+    """
+    Llama al LLM para generar un párrafo de síntesis de un bloque
+    de reglas. Degrada con elegancia: si falla o no hay API key,
+    devuelve None y el informe sale sin síntesis.
+    """
+    from app.core.fuzzy.heuristic import _llamar_llm
+
+    if not config.usar_llm_sintesis:
+        return None
+
+    prompt = (
+        f"Resume la siguiente información en 2-3 frases en castellano. "
+        f"La información es el resultado de aplicar un algoritmo de "
+        f"reglas de asociación difusa sobre datos temporales de "
+        f"{nombre_metrica}. "
+        f"Sé conciso, usa lenguaje natural y evita tecnicismos. "
+        f"No menciones valores de confianza ni lift en el resumen.\n\n"
+        f"Información:\n{bloque_texto}"
+    )
+
+    try:
+        respuesta = _llamar_llm(
+            prompt,
+            proveedor=config.proveedor_llm,
+            api_key=config.llm_api_key,
+        )
+        if respuesta and len(respuesta.strip()) > 20:
+            lineas = respuesta.strip().splitlines()
+            texto_blockquote = "\n> ".join(lineas)
+            return texto_blockquote
+        return None
+    except Exception:
+        return None

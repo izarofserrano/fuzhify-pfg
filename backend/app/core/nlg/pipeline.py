@@ -54,6 +54,9 @@ class NLGConfig:
     top_por_consecuente: int = 10
     pais: str              = "ES"
     subdiv: str            = ""
+    usar_llm_sintesis: bool      = False
+    proveedor_llm: str           = "gemini"
+    llm_api_key: str | None      = None
 
 
 # ---------------------------------------------------------------------------
@@ -551,6 +554,32 @@ def _generar_glosario_tecnico():
 
 
 # ---------------------------------------------------------------------------
+# Síntesis LLM con prompt específico por sección
+# ---------------------------------------------------------------------------
+
+def _sintetizar_con_prompt(prompt: str, config) -> str | None:
+    """
+    Llama al LLM con un prompt a medida. Degrada con elegancia si falla
+    o si usar_llm_sintesis=False.
+    """
+    if not config.usar_llm_sintesis:
+        return None
+    try:
+        from app.core.fuzzy.heuristic import _llamar_llm
+        respuesta = _llamar_llm(
+            prompt,
+            proveedor=config.proveedor_llm,
+            api_key=config.llm_api_key,
+        )
+        if respuesta and len(respuesta.strip()) > 20:
+            lineas_resp = respuesta.strip().splitlines()
+            return "\n> ".join(lineas_resp)
+        return None
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # 6b. generar_resumen - celda 12 del notebook (adaptada a parámetros explícitos)
 # ---------------------------------------------------------------------------
 
@@ -664,7 +693,22 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
             "junto con la confianza y el lift de la regla."
         )
         lineas.append("")
-        lineas.append(_detalle_por_franja(df_reglas, nombre_metrica, min_reglas_grupo))
+        texto_franjas = _detalle_por_franja(df_reglas, nombre_metrica, min_reglas_grupo)
+        lineas.append(texto_franjas)
+        _sint_franjas = _sintetizar_con_prompt(
+            f"Resume en 3-4 frases en castellano los patrones más relevantes detectados "
+            f"en el análisis por franja horaria de {nombre_metrica}. Destaca los momentos "
+            f"del día con comportamiento más diferenciado y si hay diferencias entre días "
+            f"laborables y fin de semana. Usa lenguaje natural sin tecnicismos, no menciones "
+            f"valores numéricos de confianza ni lift.\n\nDatos:\n{texto_franjas}",
+            config,
+        )
+        if _sint_franjas:
+            lineas.append(
+                f"\n> **Resumen generado con IA a partir de los datos anteriores**\n"
+                f">\n"
+                f"> *{_sint_franjas}*"
+            )
 
     # ── 4. Apéndice ─────────────────────────────────────────────────────────
     lineas.append("---")
@@ -690,6 +734,7 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
         if c not in consecuentes_ordenados:
             consecuentes_ordenados.append(c)
 
+    _lineas_niv = []
     for consecuente in consecuentes_ordenados:
         df_c = df_reglas[df_reglas["consecuente"] == consecuente].copy()
         if df_c.empty:
@@ -703,19 +748,35 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
         grupos   = agrupar_reglas(df_c, umbral_solapamiento=0.4)
         n_grupos = len(grupos)
 
-        lineas.append(f"### {nombre_metrica.capitalize()} {desc_v}")
-        lineas.append(
+        _lineas_niv.append(f"### {nombre_metrica.capitalize()} {desc_v}")
+        _lineas_niv.append(
             f"*{len(df_c)} {'regla' if len(df_c)==1 else 'reglas'}, "
             f"agrupadas en {n_grupos} {'contexto' if n_grupos==1 else 'contextos'}* | "
             f"confianza media: {df_c['confianza'].mean()*100:.0f} %, "
             f"lift medio: {df_c['lift'].mean():.1f}"
         )
-        lineas.append("")
+        _lineas_niv.append("")
 
         for grupo in grupos:
             parrafo = grupo_a_parrafo(grupo, nombre_metrica, consecuente, min_reglas_grupo)
-            lineas.append(parrafo)
-            lineas.append("")
+            _lineas_niv.append(parrafo)
+            _lineas_niv.append("")
+
+    texto_apendice_niveles = "\n".join(_lineas_niv)
+    lineas.append(texto_apendice_niveles)
+    _sint_ap = _sintetizar_con_prompt(
+        f"Resume en 3-4 frases en castellano los niveles de {nombre_metrica} "
+        f"más frecuentes y en qué contextos temporales aparecen. Destaca el nivel "
+        f"dominante y los patrones más llamativos. Usa lenguaje natural sin "
+        f"tecnicismos.\n\nDatos:\n{texto_apendice_niveles}",
+        config,
+    )
+    if _sint_ap:
+        lineas.append(
+            f"\n> **Resumen generado con IA a partir de los datos anteriores**\n"
+            f">\n"
+            f"> *{_sint_ap}*"
+        )
 
     # ── 5. Estadísticas globales ─────────────────────────────────────────────
     lineas.append("---")
