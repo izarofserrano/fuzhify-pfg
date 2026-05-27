@@ -218,11 +218,13 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
 
     # ── Paso 3: construir df de trabajo ───────────────────────────────────────
     result = df_raw[[var_tiempo, var_metrica]].copy()
-    result[var_tiempo] = pd.to_datetime(result[var_tiempo])
+    result[var_tiempo] = pd.to_datetime(result[var_tiempo], errors='coerce')
+    result = result.dropna(subset=[var_tiempo])
     result = result.sort_values(var_tiempo).reset_index(drop=True)
 
     t0    = result[var_tiempo].min()
-    result["segundos"] = (result[var_tiempo] - t0).dt.total_seconds().astype(int)
+    segundos = (result[var_tiempo] - t0).dt.total_seconds()
+    result["segundos"] = segundos.fillna(0).astype(int)
     x     = result["segundos"].to_numpy()
     x_max = int(result["segundos"].max())
 

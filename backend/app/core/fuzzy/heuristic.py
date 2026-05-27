@@ -252,6 +252,18 @@ def _heuristica(df, var_tiempo):
             continue
         serie = df[col]
         tokens = _tokenizar(col)
+        # Intentar convertir a numérico si viene como string
+        if serie.dtype == object or pd.api.types.is_string_dtype(serie):
+            serie_num = pd.to_numeric(
+                serie.astype(str).str.replace(',', '.', regex=False),
+                errors='coerce'
+            )
+            # Si más del 80% se convirtió, usar la versión numérica
+            if serie_num.notna().mean() > 0.8:
+                serie = serie_num.dropna()
+            else:
+                info[col] = "texto no convertible a numérico → descartada"
+                continue
         # Texto
         if serie.dtype == object:
             info[col] = f"texto → descartada"
