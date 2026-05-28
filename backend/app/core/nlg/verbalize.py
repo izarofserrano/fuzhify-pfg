@@ -1,5 +1,6 @@
 from .templates import (
     ETIQUETA_TEMPORAL, ETIQUETA_METRICA_COLOQUIAL, ETIQUETA_METRICA_TECNICA,
+    ETIQUETA_METRICA, NIVEL_PESO,
     JERARQUIA, HORA_A_FRANJA,
     HORAS, FRANJAS, MESES, DIAS, ANIOS, TIPO_DIA, QUINCENAS, MINUTOS,
     FESTIVOS, ESTACIONES, MESES_POR_ESTACION,
@@ -323,6 +324,114 @@ def agrupar_reglas(df_consecuente, umbral_solapamiento=0.4):
     return grupos
 
 
+def _detalle_por_dia(df_reglas, nombre_metrica, min_reglas_grupo=2):
+    """
+    Sección técnica organizada por tipo de día (laborable / fin de semana).
+    Mismo formato de salida que _detalle_por_franja().
+    """
+    TOKENS_LABORABLE = {"t_Lun", "t_Mar", "t_Mie", "t_Jue", "t_Vie", "t_Laborable"}
+    TOKENS_FDS       = {"t_Sab", "t_Dom", "t_FinSemana"}
+
+    ORDEN = ["v_OutlierAlto", "v_MuyAlta", "v_Alta", "v_Media",
+             "v_Baja", "v_MuyBaja", "v_OutlierBajo"]
+
+    def _grupo_dia(ant_str):
+        tokens = parsear_antecedente(ant_str)
+        if tokens & TOKENS_LABORABLE:
+            return "Días laborables"
+        if tokens & TOKENS_FDS:
+            return "Fin de semana"
+        return "Sin día específico"
+
+    lineas = []
+    for nombre_grupo in ("Días laborables", "Fin de semana", "Sin día específico"):
+        mask = df_reglas["antecedente"].apply(
+            lambda a, ng=nombre_grupo: _grupo_dia(a) == ng
+        )
+        sub = df_reglas[mask].copy()
+        if sub.empty:
+            continue
+
+        sub = sub.sort_values("lift", ascending=False)
+        lineas.append(f"### {nombre_grupo}")
+        lineas.append("")
+
+        for cons in ORDEN:
+            sub_c = sub[sub["consecuente"] == cons]
+            if sub_c.empty:
+                continue
+            desc_v = ETIQUETA_METRICA.get(cons, cons)
+            for _, row in sub_c.iterrows():
+                tokens   = parsear_antecedente(row["antecedente"])
+                desc_t   = verbalizar_antecedente(tokens)
+                conf_pct = int(round(row["confianza"] * 100))
+                lift_val = f"{row['lift']:.1f}"
+                cal      = construir_calidad(df_reglas)(row)
+                lineas.append(
+                    f"- **{desc_v.capitalize()}** {cal}: "
+                    f"{desc_t} (confianza {conf_pct} %, lift {lift_val})"
+                )
+        lineas.append("")
+
+    return "\n".join(lineas)
+
+
+def _detalle_por_estacion(df_reglas, nombre_metrica, min_reglas_grupo=2):
+    """
+    Sección técnica organizada por estación del año.
+    Mismo formato de salida que _detalle_por_franja().
+    """
+    GRUPOS_ESTACION = [
+        ("Primavera", {"t_Primavera", "t_Marz", "t_Abr", "t_May"}),
+        ("Verano",    {"t_Verano",    "t_Jun",  "t_Jul", "t_Ago"}),
+        ("Otoño",     {"t_Otonio",   "t_Sep",  "t_Oct", "t_Nov"}),
+        ("Invierno",  {"t_Invierno", "t_Dic",  "t_Ene", "t_Feb"}),
+    ]
+
+    ORDEN = ["v_OutlierAlto", "v_MuyAlta", "v_Alta", "v_Media",
+             "v_Baja", "v_MuyBaja", "v_OutlierBajo"]
+
+    def _grupo_estacion(ant_str):
+        tokens = parsear_antecedente(ant_str)
+        for nombre, tok_set in GRUPOS_ESTACION:
+            if tokens & tok_set:
+                return nombre
+        return "Sin estación específica"
+
+    lineas = []
+    nombres = [nombre for nombre, _ in GRUPOS_ESTACION] + ["Sin estación específica"]
+    for nombre_grupo in nombres:
+        mask = df_reglas["antecedente"].apply(
+            lambda a, ng=nombre_grupo: _grupo_estacion(a) == ng
+        )
+        sub = df_reglas[mask].copy()
+        if sub.empty:
+            continue
+
+        sub = sub.sort_values("lift", ascending=False)
+        lineas.append(f"### {nombre_grupo}")
+        lineas.append("")
+
+        for cons in ORDEN:
+            sub_c = sub[sub["consecuente"] == cons]
+            if sub_c.empty:
+                continue
+            desc_v = ETIQUETA_METRICA.get(cons, cons)
+            for _, row in sub_c.iterrows():
+                tokens   = parsear_antecedente(row["antecedente"])
+                desc_t   = verbalizar_antecedente(tokens)
+                conf_pct = int(round(row["confianza"] * 100))
+                lift_val = f"{row['lift']:.1f}"
+                cal      = construir_calidad(df_reglas)(row)
+                lineas.append(
+                    f"- **{desc_v.capitalize()}** {cal}: "
+                    f"{desc_t} (confianza {conf_pct} %, lift {lift_val})"
+                )
+        lineas.append("")
+
+    return "\n".join(lineas)
+
+
 def sintetizar_bloque_con_llm(
     bloque_texto: str,
     nombre_metrica: str,
@@ -361,3 +470,209 @@ def sintetizar_bloque_con_llm(
         return None
     except Exception:
         return None
+
+
+# ---------------------------------------------------------------------------
+# Párrafo coloquial para datasets sin granularidad horaria
+# ---------------------------------------------------------------------------
+
+def articulo_metrica(nombre_metrica: str) -> str:
+    """Devuelve el artículo determinado para la métrica (castellano)."""
+    return "la"
+
+
+def _por_estaciones(df_reglas, nombre_metrica) -> str:
+    """
+    Genera un párrafo narrativo que describe el comportamiento de la
+    métrica por estación, destacando el contraste entre las estaciones
+    extremas y las de transición.
+    """
+    _TOKENS_ESTACION = {
+        "Primavera": {"t_Primavera", "t_Marz", "t_Abr", "t_May"},
+        "Verano":    {"t_Verano",    "t_Jun",  "t_Jul", "t_Ago"},
+        "Otoño":     {"t_Otonio",   "t_Sep",  "t_Oct", "t_Nov"},
+        "Invierno":  {"t_Invierno", "t_Dic",  "t_Ene", "t_Feb"},
+    }
+    _MESES_TOKENS = {
+        "t_Ene","t_Feb","t_Marz","t_Abr","t_May","t_Jun",
+        "t_Jul","t_Ago","t_Sep","t_Oct","t_Nov","t_Dic",
+    }
+
+    def _mes_destacado(reglas_sub):
+        """Nombre del mes con mayor lift dentro de este subconjunto."""
+        sub = reglas_sub[
+            reglas_sub["antecedente"].apply(
+                lambda ant: bool(
+                    set(t.strip() for t in ant.split(" AND ")) & _MESES_TOKENS
+                )
+            )
+        ]
+        if sub.empty:
+            return None
+        best_ant = sub.loc[sub["lift"].idxmax(), "antecedente"]
+        toks = set(t.strip() for t in best_ant.split(" AND ")) & _MESES_TOKENS
+        return ETIQUETA_TEMPORAL.get(next(iter(toks)), None) if toks else None
+
+    # 1. Calcular datos por estación (solo las que tienen reglas)
+    datos = {}
+    for est, tokens in _TOKENS_ESTACION.items():
+        reglas_est = df_reglas[
+            df_reglas["antecedente"].apply(
+                lambda ant, tok=tokens: bool(
+                    set(t.strip() for t in ant.split(" AND ")) & tok
+                )
+            )
+        ]
+        if reglas_est.empty:
+            continue
+        nivel = reglas_est.groupby("consecuente")["lift"].mean().idxmax()
+        datos[est] = {
+            "nivel":      nivel,
+            "peso":       NIVEL_PESO.get(nivel, 4),
+            "desc":       ETIQUETA_METRICA_COLOQUIAL.get(nivel, nivel),
+            "mes":        _mes_destacado(reglas_est),
+            "lift_media": reglas_est["lift"].mean(),
+        }
+
+    if not datos:
+        return ""
+
+    # Ordenar por peso desc; desempate por lift_media desc
+    ords = sorted(datos.items(),
+                  key=lambda x: (x[1]["peso"], x[1]["lift_media"]),
+                  reverse=True)
+
+    # ── Caso: una sola estación ────────────────────────────────────────────
+    if len(ords) == 1:
+        est, d = ords[0]
+        sufijo = f", especialmente en {d['mes']}" if d["mes"] else ""
+        return (f"En {est.lower()}, la {nombre_metrica} tiende a ser "
+                f"**{d['desc']}**{sufijo}.")
+
+    # ── Caso: dos estaciones ───────────────────────────────────────────────
+    if len(ords) == 2:
+        (e1, d1), (e2, d2) = ords
+        s1 = f" (especialmente en {d1['mes']})" if d1["mes"] else ""
+        s2 = f" (especialmente en {d2['mes']})" if d2["mes"] else ""
+        return (f"{e1} muestra la {nombre_metrica} más **{d1['desc']}**{s1}. "
+                f"{e2}, en cambio, registra valores **{d2['desc']}**{s2}.")
+
+    # ── Caso general: 3-4 estaciones ──────────────────────────────────────
+    peso_max = ords[0][1]["peso"]
+    peso_min = ords[-1][1]["peso"]
+
+    est_altas = [(e, d) for e, d in ords if d["peso"] == peso_max]
+    est_bajas = [(e, d) for e, d in ords
+                 if d["peso"] == peso_min and d["peso"] < peso_max]
+    est_trans = [(e, d) for e, d in ords
+                 if peso_min < d["peso"] < peso_max]
+
+    frases = []
+
+    # Frase alta
+    nombres_alt = listar_en_español([e for e, _ in est_altas])
+    verb   = "es" if len(est_altas) == 1 else "son"
+    epocas = "la época" if len(est_altas) == 1 else "las épocas"
+    desc_alt    = est_altas[0][1]["desc"]
+    meses_alt   = [d["mes"] for _, d in est_altas if d["mes"]]
+    suf_mes_alt = (f", especialmente en {listar_en_español(meses_alt)}"
+                   if meses_alt else "")
+    frases.append(
+        f"{nombres_alt.capitalize()} {verb} {epocas} donde "
+        f"la {nombre_metrica} tiende a ser **{desc_alt}**{suf_mes_alt}."
+    )
+
+    # Frase baja
+    if est_bajas:
+        nombres_baj = listar_en_español([e.lower() for e, _ in est_bajas])
+        desc_baj    = est_bajas[0][1]["desc"]
+        meses_baj   = [d["mes"] for _, d in est_bajas if d["mes"]]
+        if meses_baj:
+            lbl = "el mes" if len(meses_baj) == 1 else "los meses"
+            suf_mes_baj = (f", con {listar_en_español(meses_baj)} "
+                           f"como {lbl} de mayor contraste")
+        else:
+            suf_mes_baj = ""
+        frases.append(
+            f"En {nombres_baj}, en cambio, "
+            f"la {nombre_metrica} tiende a ser **{desc_baj}**{suf_mes_baj}."
+        )
+
+    # Frases de transición
+    for est, d in est_trans:
+        if d["mes"]:
+            frases.append(
+                f"{est} actúa como período de transición: "
+                f"la {nombre_metrica} tiende a ser **{d['desc']}**, "
+                f"con {d['mes']} marcando ya un cambio notable."
+            )
+        else:
+            frases.append(
+                f"{est} actúa como período de transición, "
+                f"con la {nombre_metrica} tendiendo a ser **{d['desc']}**."
+            )
+
+    return " ".join(frases)
+
+
+def _por_meses(df_reglas, nombre_metrica) -> str:
+    """
+    Describe los meses con comportamiento más extremo
+    (el más alto y el más bajo por lift).
+    """
+    _TOKENS_MES = {
+        "enero": "t_Ene", "febrero": "t_Feb", "marzo": "t_Marz",
+        "abril": "t_Abr", "mayo": "t_May", "junio": "t_Jun",
+        "julio": "t_Jul", "agosto": "t_Ago", "septiembre": "t_Sep",
+        "octubre": "t_Oct", "noviembre": "t_Nov", "diciembre": "t_Dic",
+    }
+
+    articulo = articulo_metrica(nombre_metrica)
+    datos_mes = []
+
+    for mes_nombre, token in _TOKENS_MES.items():
+        reglas_mes = df_reglas[
+            df_reglas["antecedente"].str.contains(token, regex=False)
+        ]
+        if reglas_mes.empty:
+            continue
+        lift_max = reglas_mes["lift"].max()
+        nivel = reglas_mes.loc[reglas_mes["lift"].idxmax(), "consecuente"]
+        datos_mes.append((mes_nombre, nivel, lift_max))
+
+    if not datos_mes:
+        return ""
+
+    datos_mes.sort(key=lambda x: x[2], reverse=True)
+    destacados = datos_mes[:3]
+
+    frases = []
+    for mes, nivel, _ in destacados:
+        desc = ETIQUETA_METRICA_COLOQUIAL.get(nivel, nivel)
+        frases.append(f"en {mes}, {articulo} {nombre_metrica} "
+                      f"tiende a ser **{desc}**")
+
+    parrafo = frases[0].capitalize()
+    for f in frases[1:]:
+        parrafo += f"; {f}"
+    parrafo += "."
+    return parrafo
+
+
+def _parrafo_coloquial_temporal(df_reglas, nombre_metrica,
+                                bloques) -> str:
+    """
+    Párrafo coloquial para datasets sin granularidad horaria.
+    Usa el nivel temporal más informativo disponible.
+    NO tocar _parrafo_coloquial() que es para franjas horarias.
+    """
+    if bloques.get("HAY_ESTACIONES"):
+        return _por_estaciones(df_reglas, nombre_metrica)
+    elif bloques.get("HAY_MESES"):
+        return _por_meses(df_reglas, nombre_metrica)
+    elif bloques.get("HAY_ANIOS"):
+        return (f"Los patrones detectados muestran variación "
+                f"interanual en {nombre_metrica}.")
+    else:
+        return (f"Los patrones detectados muestran variación "
+                f"temporal en {nombre_metrica}.")

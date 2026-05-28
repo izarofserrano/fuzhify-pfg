@@ -101,6 +101,25 @@ Estos umbrales son fijos y coherentes con los del selector de src02.
 - Soporta: horas, franjas, días, laborables, meses, estaciones, quincenas,
   años, minutos (cuartos), festivos.
 - Informe dividido en secciones por franja horaria y tipo de día.
+- Módulos: pipeline.py (NLGConfig + generar_informe), verbalize.py,
+  detection.py, templates.py, constants.py.
+
+#### Síntesis LLM opcional (src03)
+- `NLGConfig` acepta `usar_llm_sintesis: bool = False`, `proveedor_llm: str = "gemini"`,
+  `llm_api_key: str | None = None`.
+- Cuando está activa, el informe incluye **exactamente 2 llamadas al LLM**:
+  1. Al final de "Análisis por franja horaria" (función `_detalle_por_franja`).
+  2. Al final del "Apéndice: Análisis por nivel" (bucle de consecuentes).
+- La síntesis se renderiza como blockquote con cabecera fija:
+  `> **Resumen generado con IA a partir de los datos anteriores**`
+- Degradación elegante: si el LLM falla o no hay API key, el informe sale
+  sin síntesis, idéntico al modo sin LLM.
+- Implementación: `_sintetizar_con_prompt()` en pipeline.py llama a
+  `_llamar_llm()` de `app.core.fuzzy.heuristic` (no duplicar).
+- API key: variable de entorno `GEMINI_API_KEY` en `backend/.env`,
+  leída automáticamente por pydantic-settings (`settings.gemini_api_key`).
+- Por defecto `usar_llm_sintesis=False` → la salida es determinista y
+  los tests de paridad no se ven afectados.
 
 ### src04 — Informe global 
 - Lee los CSVs de reglas generados por src02 para múltiples sensores.

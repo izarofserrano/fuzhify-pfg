@@ -7,7 +7,7 @@
 /* ── Cabecera corrida (running element para WeasyPrint) ── */
 .cabecera-corrida {
   position: running(cabecera-corrida);
-  font-family: 'DejaVu Sans', Arial, sans-serif;
+  font-family: 'Open Sans', 'DejaVu Sans', sans-serif;
   font-size: 8pt;
   color: #9b9b9b;
   text-align: center;
@@ -17,7 +17,7 @@
 
 /* ── Tipografía base ── */
 body {
-  font-family: 'DejaVu Sans', Arial, sans-serif;
+  font-family: 'Open Sans', 'DejaVu Sans', sans-serif;
   font-size: 10pt;
   color: #1a1a1a;
   line-height: 1.65;
@@ -131,8 +131,22 @@ body {
    PROSA (markdown renderizado)
    ═══════════════════════════════════════════════ */
 .prose h1 { font-size: 13pt; color: #1a1a1a; margin: 16pt 0 6pt; }
-.prose h2 { font-size: 12pt; color: #222;    margin: 14pt 0 5pt; }
-.prose h3 { font-size: 11pt; color: #333;    margin: 11pt 0 4pt; }
+.prose h2 {
+  color: #1D4ED8;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-color: #1D4ED8;
+  font-size: 1.15em;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
+}
+.prose h3 {
+  color: #374151;
+  font-size: 1.0em;
+  font-weight: 600;
+  margin-top: 1em;
+  margin-bottom: 0.2em;
+}
 .prose h4 { font-size: 10pt; color: #444;    margin: 9pt 0 3pt; }
 .prose p  { margin: 0 0 8pt; }
 
@@ -146,7 +160,6 @@ body {
 .prose blockquote {
   margin: 8pt 0 10pt 0;
   padding: 6pt 12pt;
-  border-left: 3pt solid #2563EB;
   background: #eff6ff;
   color: #444;
   font-size: 9.5pt;
@@ -250,3 +263,47 @@ body {
   word-break: break-word;
 }
 .tabla-reglas tbody tr:nth-child(even) td { background: #eff6ff; }
+
+/* ═══════════════════════════════════════════════
+   APÉNDICE DE NIVELES
+   ═══════════════════════════════════════════════ */
+.apendice-niveles h3 ~ p {
+  padding-left: 1.2em;
+  text-indent: -1.2em;
+  margin-left: 1.2em;
+  margin-top: 0.15em;
+  margin-bottom: 0.15em;
+  position: relative;
+}
+
+.apendice-niveles h3 ~ p::before {
+  content: "•";
+  color: black;
+  font-weight: bold;
+  margin-right: 0.5em;
+}
+
+/* ── Bullets de listas coherentes con el apéndice ── */
+ul li {
+  color: inherit;
+}
+
+ul li::marker {
+  color: black;
+}
+
+/* ── Línea de estadísticas del apéndice (no recibe bullet) ── */
+.apendice-niveles .stats-nivel {
+  padding-left: 0;
+  text-indent: 0;
+  margin-left: 0;
+  margin-top: 0.4em;
+  margin-bottom: 0.1em;
+  font-style: italic;
+  color: #6B7280;
+}
+
+.apendice-niveles .stats-nivel::before {
+  content: none;
+}
+

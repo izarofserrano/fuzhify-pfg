@@ -14,7 +14,7 @@
       }
       @bottom-right {
         content: "Página " counter(page) " de " counter(pages);
-        font-family: 'DejaVu Sans', Arial, sans-serif;
+        font-family: 'Open Sans', 'DejaVu Sans', sans-serif;
         font-size: 8pt;
         color: #9b9b9b;
       }
@@ -68,26 +68,18 @@
         {% endfor %}
       </table>
     </div>
-  </section>
+  </section> 
 
   <!-- ══════════════════════════════════════════════
-       SECCIÓN 2 — RESUMEN EJECUTIVO
-       ══════════════════════════════════════════════ -->
-  <section class="seccion nueva-pagina">
-    <h2 class="seccion-h2">Resumen ejecutivo</h2>
-    <div class="prose">{{ resumen_html }}</div>
-  </section>
-
-  <!-- ══════════════════════════════════════════════
-       SECCIÓN 3 — ANÁLISIS COMPLETO
+       SECCIÓN 2 — ANÁLISIS COMPLETO
        ══════════════════════════════════════════════ -->
   <section class="seccion nueva-pagina">
     <h2 class="seccion-h2">Análisis completo</h2>
-    <div class="prose">{{ cuerpo_html }}</div>
+    <div class="prose apendice-niveles">{{ cuerpo_html }}</div>
   </section>
 
   <!-- ══════════════════════════════════════════════
-       SECCIÓN 4 — VISUALIZACIONES
+       SECCIÓN 3 — VISUALIZACIONES
        ══════════════════════════════════════════════ -->
   <section class="seccion nueva-pagina">
     <h2 class="seccion-h2">Visualizaciones</h2>
@@ -118,7 +110,7 @@
   </section>
 
   <!-- ══════════════════════════════════════════════
-       SECCIÓN 5 — APÉNDICE: TOP 20 REGLAS
+       SECCIÓN 4 — APÉNDICE: TOP 20 REGLAS
        ══════════════════════════════════════════════ -->
   <section class="seccion nueva-pagina">
     <h2 class="seccion-h2">Apéndice: Top 20 reglas por lift</h2>

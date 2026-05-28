@@ -35,6 +35,9 @@ from .verbalize import (
     construir_calidad,
     regla_a_frase,
     agrupar_reglas,
+    _detalle_por_dia,
+    _detalle_por_estacion,
+    _parrafo_coloquial_temporal,
 )
 
 
@@ -612,6 +615,47 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
     HAY_FRANJAS    = bloques.get("HAY_FRANJAS", False)
     HAY_MESES      = bloques.get("HAY_MESES", False)
     HAY_ESTACIONES = bloques.get("HAY_ESTACIONES", False)
+    HAY_DIAS       = bloques.get("HAY_DIAS", False)
+    HAY_LABORABLES = bloques.get("HAY_LABORABLES", False)
+
+    def _modo_informe(bloques: dict, df_reglas) -> str:
+        """
+        Determina el modo del informe según los bloques predominantes.
+        Se basa en cuántas reglas tienen tokens de cada tipo.
+        """
+        if bloques["HAY_HORAS"] or bloques["HAY_FRANJAS"]:
+            return "franjas"
+
+        tokens_dias = {
+            "t_Lun","t_Mar","t_Mie","t_Jue","t_Vie","t_Sab","t_Dom",
+            "t_Laborable","t_FinSemana"
+        }
+        tokens_estaciones = {
+            "t_Primavera","t_Verano","t_Otonio","t_Invierno",
+            "t_Ene","t_Feb","t_Marz","t_Abr","t_May","t_Jun",
+            "t_Jul","t_Ago","t_Sep","t_Oct","t_Nov","t_Dic"
+        }
+
+        n_reglas_dias = 0
+        n_reglas_estaciones = 0
+        for ant in df_reglas["antecedente"]:
+            tokens = set(t.strip() for t in ant.split(" AND "))
+            if tokens & tokens_dias:
+                n_reglas_dias += 1
+            if tokens & tokens_estaciones:
+                n_reglas_estaciones += 1
+
+        if n_reglas_estaciones > n_reglas_dias:
+            return "estaciones"
+        if bloques["HAY_DIAS"] or bloques["HAY_LABORABLES"]:
+            if n_reglas_dias > 0:
+                return "dias"
+        if bloques["HAY_MESES"] or bloques["HAY_ESTACIONES"]:
+            return "estaciones"
+
+        return "temporal"
+
+    modo = _modo_informe(bloques, df_reglas)
 
     # Filtrar combinaciones semánticamente inválidas
     n_antes = len(df_reglas)
@@ -622,7 +666,7 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
     ].reset_index(drop=True)
     n_filtradas = n_antes - len(df_reglas)
     if n_filtradas > 0:
-        print(f"☢️  {n_filtradas} regla(s) eliminadas por combinación inválida.")
+        print(f"  {n_filtradas} regla(s) eliminadas por combinación inválida.")
 
     # Ordenar por lift DESC: necesario para que agrupar_reglas sea determinista
     df_reglas = df_reglas.sort_values("lift", ascending=False).reset_index(drop=True)
@@ -663,57 +707,122 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
     lineas.append(_generar_glosario_breve(metrica))
 
     # ── 2. Narrativa coloquial ──────────────────────────────────────────────
-    if HAY_HORAS or HAY_FRANJAS:
+    if modo == "franjas":
         lineas.append(f"## ¿Cómo se comporta **{nombre_metrica}** a lo largo del día?")
         lineas.append(f"> Esta sección resume el comportamiento de **{nombre_metrica}** "
                       f"en lenguaje sencillo, sin tecnicismos.")
         lineas.append("")
         lineas.append(_parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica))
     else:
-        lineas.append(f"## Patrones detectados")
-        lineas.append(
-            f"> Este dataset tiene granularidad **{granularidad_desc}**: "
-            f"no hay patrones por franja horaria. "
-            f"Los patrones detectados son {'estacionales y de calendario' if HAY_MESES or HAY_ESTACIONES else 'temporales'}."
-        )
+        if modo == "estaciones":
+            titulo_coloquial = (f"¿Cómo se comporta "
+                                f"**{nombre_metrica}** "
+                                f"a lo largo del año?")
+        elif modo == "dias":
+            titulo_coloquial = (f"¿Cómo se comporta "
+                                f"**{nombre_metrica}** "
+                                f"según el día de la semana?")
+        else:
+            titulo_coloquial = (f"¿Cómo se comporta "
+                                f"**{nombre_metrica}** "
+                                f"temporalmente?")
+
+        lineas.append(f"## {titulo_coloquial}")
+        lineas.append(f"> Esta sección resume el comportamiento de "
+                      f"**{nombre_metrica}** en lenguaje sencillo, "
+                      f"sin tecnicismos.")
+        lineas.append("")
+        parrafo = _parrafo_coloquial_temporal(df_reglas,
+                                              nombre_metrica,
+                                              bloques)
+        if parrafo:
+            lineas.append(parrafo)
+            lineas.append("")
     lineas.append("")
 
     parrafo_cal = _parrafo_calendario(df_reglas, nombre_metrica)
     if parrafo_cal:
         lineas.append(parrafo_cal)
         lineas.append("")
+        if modo != "franjas":
+            _sint_cal = _sintetizar_con_prompt(
+                f"Resume en 2-3 frases los patrones de calendario más "
+                f"destacados de {nombre_metrica} (meses, estaciones o períodos "
+                f"concretos con comportamiento diferencial). Sin tecnicismos.",
+                config,
+            )
+            if _sint_cal:
+                lineas.append(
+                    f"\n> **Resumen generado con IA a partir de los datos anteriores**\n"
+                    f">\n"
+                    f"> *{_sint_cal}*"
+                )
 
-    # ── 3. Análisis técnico por franja ──────────────────────────────────────
-    if HAY_HORAS or HAY_FRANJAS:
-        lineas.append("## Análisis por franja horaria")
-        lineas.append("")
-        lineas.append(
+    # ── 3. Análisis técnico ──────────────────────────────────────────────────
+    if modo == "franjas":
+        titulo_tecnico = "Análisis por franja horaria"
+        desc_tecnico   = (
             "Detalle de los patrones detectados, organizados por momento del día. "
             "Cada punto indica el nivel de " + metrica + " más probable en ese contexto, "
             "junto con la confianza y el lift de la regla."
         )
-        lineas.append("")
-        texto_franjas = _detalle_por_franja(df_reglas, nombre_metrica, min_reglas_grupo)
-        lineas.append(texto_franjas)
-        _sint_franjas = _sintetizar_con_prompt(
+        detalle = _detalle_por_franja(df_reglas, nombre_metrica, min_reglas_grupo)
+        prompt_sint = (
             f"Resume en 3-4 frases en castellano los patrones más relevantes detectados "
             f"en el análisis por franja horaria de {nombre_metrica}. Destaca los momentos "
             f"del día con comportamiento más diferenciado y si hay diferencias entre días "
             f"laborables y fin de semana. Usa lenguaje natural sin tecnicismos, no menciones "
-            f"valores numéricos de confianza ni lift.\n\nDatos:\n{texto_franjas}",
-            config,
+            f"valores numéricos de confianza ni lift.\n\nDatos:\n{detalle}"
         )
-        if _sint_franjas:
-            lineas.append(
-                f"\n> **Resumen generado con IA a partir de los datos anteriores**\n"
-                f">\n"
-                f"> *{_sint_franjas}*"
-            )
+    elif modo == "dias":
+        titulo_tecnico = "Análisis por día de la semana"
+        desc_tecnico   = "Detalle de los patrones detectados, organizados por día de la semana."
+        detalle = _detalle_por_dia(df_reglas, nombre_metrica, min_reglas_grupo)
+        prompt_sint = (
+            f"Resume en 3-4 frases los patrones más relevantes "
+            f"por día de la semana de {nombre_metrica}. Destaca diferencias "
+            f"entre días laborables y fin de semana si las hay. Sin tecnicismos "
+            f"ni valores numéricos.\n\nDatos:\n{detalle}"
+        )
+    elif modo == "estaciones":
+        titulo_tecnico = "Análisis por mes y estación"
+        desc_tecnico   = "Detalle de los patrones detectados, organizados por estación y mes del año."
+        detalle = _detalle_por_estacion(df_reglas, nombre_metrica, min_reglas_grupo)
+        prompt_sint = (
+            f"Resume en 3-4 frases los patrones estacionales "
+            f"más relevantes de {nombre_metrica}. Destaca las estaciones o "
+            f"meses con comportamiento más diferenciado. Sin tecnicismos ni "
+            f"valores numéricos.\n\nDatos:\n{detalle}"
+        )
+    else:  # temporal — fallback
+        titulo_tecnico = "Análisis temporal"
+        desc_tecnico   = ""
+        detalle = _detalle_por_franja(df_reglas, nombre_metrica, min_reglas_grupo)
+        prompt_sint = (
+            f"Resume en 3-4 frases en castellano los patrones más relevantes detectados "
+            f"en el análisis temporal de {nombre_metrica}. Usa lenguaje natural sin "
+            f"tecnicismos, no menciones valores numéricos de confianza ni lift."
+            f"\n\nDatos:\n{detalle}"
+        )
+
+    lineas.append(f"## {titulo_tecnico}")
+    lineas.append("")
+    if desc_tecnico:
+        lineas.append(desc_tecnico)
+        lineas.append("")
+    lineas.append(detalle)
+    _sint_tec = _sintetizar_con_prompt(prompt_sint, config)
+    if _sint_tec:
+        lineas.append(
+            f"\n> **Resumen generado con IA a partir de los datos anteriores**\n"
+            f">\n"
+            f"> *{_sint_tec}*"
+        )
 
     # ── 4. Apéndice ─────────────────────────────────────────────────────────
     lineas.append("---")
     lineas.append("")
-    lineas.append("## Apéndice: Análisis por nivel de " + metrica)
+    lineas.append("## Análisis por nivel de " + metrica)
     lineas.append("")
     lineas.append("")
     lineas.append(_generar_glosario_tecnico())
@@ -751,9 +860,9 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
         _lineas_niv.append(f"### {nombre_metrica.capitalize()} {desc_v}")
         _lineas_niv.append(
             f"*{len(df_c)} {'regla' if len(df_c)==1 else 'reglas'}, "
-            f"agrupadas en {n_grupos} {'contexto' if n_grupos==1 else 'contextos'}* | "
+            f"agrupadas en {n_grupos} {'contexto' if n_grupos==1 else 'contextos'} | "
             f"confianza media: {df_c['confianza'].mean()*100:.0f} %, "
-            f"lift medio: {df_c['lift'].mean():.1f}"
+            f"lift medio: {df_c['lift'].mean():.1f}*"
         )
         _lineas_niv.append("")
 

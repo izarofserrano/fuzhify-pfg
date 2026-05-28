@@ -48,7 +48,13 @@ def _partir_secciones(texto_md: str) -> tuple[str, str]:
 
 def _md_to_html(texto: str) -> str:
     conv = md_lib.Markdown(extensions=["tables", "extra"])
-    return conv.convert(_limpiar_imagenes_md(texto))
+    html = conv.convert(_limpiar_imagenes_md(texto))
+    html = re.sub(
+        r'<p><em>(\d+ reglas[^<]+)</em></p>',
+        r'<p class="stats-nivel"><em>\1</em></p>',
+        html,
+    )
+    return html
 
 
 def renderizar_html(
