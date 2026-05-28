@@ -129,6 +129,7 @@ explícito antes de leer atributos post-commit."
 
 Test end-to-end manual verificado:
 detect-metric → run → completado en 2.5 min → 33 reglas → informe MD.
+=======
 
 ## 2026-05-26 — Rediseño visual del frontend + corrección ProgressPipeline
 
@@ -159,11 +160,56 @@ pero la API envía `'fuzzy'`, `'mining'`, `'nlg'` → los nodos nunca se marcaba
 **Fix:** `watch` + `ref(ultimoProgreso)` que no actualiza cuando `estado === 'error'`.
 Documentado en ARQUITECTURA.md (sección "Campo fase_actual vs campo estado").
 
-### Causa raíz de "sigue sin funcionar" — Vite HMR en Windows + Docker
-El fix de ProgressPipeline era correcto, pero el contenedor seguía sirviendo el código antiguo.
-Causa: Vite usa `inotify` (eventos del kernel Linux) para detectar cambios. En Windows + Docker
-Desktop, los ficheros del host se montan en el contenedor Linux via WSL2/Hyper-V y los eventos
-`inotify` no cruzan ese límite → Vite nunca veía los cambios → HMR muerto silenciosamente.
-Fix: `server.watch.usePolling: true` en `frontend/vite.config.js`. Vite pasa a leer
-los ficheros periódicamente en lugar de esperar eventos del kernel. A partir de ahora,
-cualquier cambio en `.vue` o `.css` se refleja en el navegador sin reiniciar el contenedor.
+## 2026-05-27/28 — Módulo NLG: adaptación por granularidad + PDF export styling
+
+### NLG adaptativo por granularidad (src03)
+
+**Problema:** el módulo NLG asumía siempre datos horarios (modo "franjas").
+Datasets con granularidad diaria (ej. Delhi climate) o sin horas generaban
+informes sin sentido porque la sección "Análisis por franja horaria" quedaba
+vacía o con una sola regla.
+
+**Solución — función `_modo_informe()`** en `pipeline.py`:
+- Cuenta reglas con tokens de días (`t_Lun`…`t_Dom`, `t_Laborable`…)
+  frente a reglas con tokens estacionales/mensuales (`t_Primavera`…,
+  `t_Ene`…).
+- El modo con más reglas gana: `"franjas"` > `"estaciones"` > `"dias"` > `"temporal"`.
+- La presencia de columnas `HAY_HORAS`/`HAY_FRANJAS` en el fuzzy CSV
+  fuerza `"franjas"` sin contar reglas.
+- Delhi climate (granularidad diaria): 1 regla con `t_Lun` vs 13+ con
+  meses/estaciones → modo `"estaciones"` correcto.
+
+**Nuevas funciones en `verbalize.py`:**
+- `_detalle_por_dia()` — sección técnica agrupada por laborable/fin de semana
+- `_detalle_por_estacion()` — sección técnica agrupada por estación
+- `_parrafo_coloquial_temporal()` — párrafo coloquial para modos no-franjas,
+  delega en `_por_estaciones()` o `_por_meses()` según bloques activos
+- `_por_estaciones()` — párrafo narrativo con estructura de contraste:
+  épocas altas → "en cambio" épocas bajas → "actúa como período de transición"
+  para épocas intermedias. Usa `NIVEL_PESO` para ordenar niveles.
+
+**Tests de paridad:** 3/3 passed tras regenerar referencias `_v2.md`.
+Los tres modos (franjas, estaciones, dias) verificados con datasets reales.
+
+### PDF export — mejoras de estilos (`pdf_export/templates/`)
+
+Cambios acumulados en `styles.css` e `informe.html`:
+- Fuente: `'DejaVu Sans'` → `'Open Sans', 'DejaVu Sans'` en `body` y cabecera.
+- Blockquote: eliminado `border-left: 3pt solid #2563EB` (visual más limpio).
+- `.prose h2`: azul `#1D4ED8` + `text-decoration: underline` (subrayado solo el texto, no toda la línea).
+- `.prose h3`: gris oscuro `#374151`, `font-weight: 600`, sin subrayado.
+- `.apendice-niveles h3 ~ p`: hanging-indent + bullet `•` azul via `::before`
+  para igualar visualmente los párrafos del apéndice con los `<li>` de listas.
+- `.stats-nivel`: clase añadida vía regex en `render.py` para la línea
+  "*N reglas, agrupadas en X contextos…*" — suprime el bullet y aplica
+  estilo gris cursiva para distinguirla de las reglas.
+- `ul li::marker`: `color: #1D4ED8` para coherencia con bullets del apéndice.
+
+**Nota técnica (render.py):** el post-procesado de HTML aplica:
+```python
+re.sub(r'<p><em>(\d+ reglas[^<]+)</em></p>',
+       r'<p class="stats-nivel"><em>\1</em></p>', html)
+```
+Solo afecta a `<p><em>` que empiezan por dígito + "reglas", sin tocar
+otros cursivos del informe.
+

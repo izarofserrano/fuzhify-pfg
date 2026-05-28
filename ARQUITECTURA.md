@@ -357,6 +357,59 @@ colas externo.
 
 ---
 
+### 7. Exportación a PDF (WeasyPrint)
+
+**Contexto:** El informe generado en `informe.md` necesita una versión
+imprimible, descargable y visualmente presentable para la defensa del TFG.
+
+**Decisión:** El módulo `core/pdf_export/` convierte el Markdown a HTML
+con la librería `markdown` (extensiones `tables` y `extra`), aplica una
+hoja de estilos (`templates/styles.css`) y renderiza el PDF con
+WeasyPrint vía `weasyprint.HTML(string=html).write_pdf()`.
+
+**Estructura del módulo:**
+- `render.py` — convierte el Markdown a HTML y aplica post-procesado
+  (regex para clasificar párrafos de estadísticas como `.stats-nivel`)
+- `pipeline.py` — genera las tres gráficas (scatter lift, top-15, fuzzy),
+  llama a `render.py` y a WeasyPrint
+- `plots.py` — matplotlib: scatter soporte/confianza coloreado por lift,
+  barras horizontales top-15, barras de activación difusa
+- `templates/informe.html` — plantilla Jinja2 con cuatro secciones:
+  portada, análisis completo, visualizaciones, apéndice de reglas
+- `templates/styles.css` — hoja de estilos para WeasyPrint
+
+**Endpoint:** `GET /api/v1/jobs/{job_id}/informe.pdf`
+
+**Por qué WeasyPrint:** renderiza CSS completo (incluido `@page`,
+running elements para cabecera, `break-before: page`) directamente
+desde Python sin dependencia de un navegador headless. Es la solución
+estándar para PDF desde HTML en el ecosistema FastAPI/Python.
+
+---
+
+### 8. Arranque del proyecto y migraciones Alembic
+
+**Contexto:** La base de datos PostgreSQL arranca vacía. Los modelos
+SQLAlchemy no crean las tablas automáticamente en producción; se gestionan
+mediante Alembic para tener control de versiones del esquema.
+
+**Secuencia de arranque obligatoria (primera vez):**
+
+```bash
+docker compose up --build -d
+docker compose exec backend alembic upgrade head
+```
+
+**Por qué dentro del contenedor:** el hostname `postgres` solo resuelve
+desde la red interna de Docker. Ejecutar `alembic upgrade head` directamente
+en el host falla con `could not translate host name "postgres"` porque
+el host no tiene acceso a esa red.
+
+**Arranques posteriores:** `docker compose up -d`. Las migraciones solo
+hay que volver a aplicar si hay ficheros nuevos en `alembic/versions/`.
+
+---
+
 ### 6. Detección automática de `var_tiempo` y `var_metrica`
 
 **Contexto:** Los notebooks de referencia hardcodeaban `var_tiempo="fecha"`
