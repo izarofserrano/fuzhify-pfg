@@ -36,3 +36,4 @@ docker-compose.override.yml
 .agents/
 .claude/settings.local.json
 .claude/skills/frontend-design/
+backend/data/
