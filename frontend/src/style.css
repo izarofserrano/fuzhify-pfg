@@ -211,7 +211,6 @@ select.field {
 .prose-fuzhify pre code { background: transparent; padding: 0; }
 .prose-fuzhify strong { color: #BFDBFE; font-weight: 700; }
 .prose-fuzhify blockquote {
-  border-left: 3px solid #2563EB;
   padding: 0.6em 1em;
   background: #1E293B;
   color: var(--c-muted);
