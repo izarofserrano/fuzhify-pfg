@@ -233,7 +233,7 @@ def _detectar_var_tiempo(df_raw):
         except Exception:
             pass
 
-    print("  ⚠️  No se detectó columna temporal. Especifica VAR_TIEMPO_OVERRIDE.")
+    print("  No se detectó columna temporal. Especifica VAR_TIEMPO_OVERRIDE.")
     return None, df_raw
 
 

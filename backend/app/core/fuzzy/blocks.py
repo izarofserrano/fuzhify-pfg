@@ -159,10 +159,10 @@ def gen_t_festivos(df, var_tiempo, anio_inicio, anio_fin, config):
             df[var_tiempo].dt.date.apply(lambda d: 1.0 if d in festivos_set else 0.0)
         )
     except ImportError:
-        print("  ⚠️  Librería 'holidays' no disponible. Generando t_Festivo=0.")
+        print("  Librería 'holidays' no disponible. Generando t_Festivo=0.")
         df["t_Festivo"] = 0.0
     except Exception as e:
-        print(f"  ⚠️  Error al obtener festivos: {e}")
+        print(f"  Error al obtener festivos: {e}")
         df["t_Festivo"] = 0.0
 
     return df
