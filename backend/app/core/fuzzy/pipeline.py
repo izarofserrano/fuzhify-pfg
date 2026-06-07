@@ -88,8 +88,8 @@ def _calcular_gen_flags(config: FuzzyConfig, df, var_tiempo) -> FuzzyConfig:
         "MESES":      gran <= 86400    and n_meses >= 2,
         "ESTACIONES": gran <= 604800   and cobertura_dias >= 90,
         "QUINCENAS":  gran <= 86400    and cobertura_dias >= 30,
-        "DIAS":       gran <= 86400    and cobertura_dias >= 7,
-        "LABORABLES": gran <= 86400    and cobertura_dias >= 7,
+        "DIAS":       gran < 86400     and cobertura_dias >= 7,
+        "LABORABLES": gran < 86400     and cobertura_dias >= 7,
         "FRANJAS":    gran <= 3600     and cobertura_dias >= 1,
         "HORAS":      gran <= 3600     and cobertura_dias >= 1,
         "MIN_FINOS":  gran < 60        and cobertura_s   >= 3600,
@@ -158,6 +158,32 @@ def detectar_metricas_candidatas(df: pd.DataFrame, config: FuzzyConfig) -> dict:
     }
 
 
+def _limpiar_metrica(serie: pd.Series, centinelas: list = None) -> pd.Series:
+    """
+    Limpia la columna de métrica antes de fuzzificar.
+    1. Elimina NaN reales.
+    2. Elimina valores centinela (por defecto: -1, -200, 9999, -9999).
+    Devuelve la serie limpia. Si queda vacía, lanza ValueError
+    con mensaje descriptivo.
+    """
+    if centinelas is None:
+        centinelas = [-1, -200, 9999, -9999]
+
+    # Paso 1: NaN
+    serie = serie.dropna()
+
+    # Paso 2: centinelas
+    serie = serie[~serie.isin(centinelas)]
+
+    if serie.empty:
+        raise ValueError(
+            f"La columna de métrica quedó vacía tras la limpieza. "
+            f"Revisa que el CSV no tenga solo valores nulos o centinela."
+        )
+
+    return serie
+
+
 def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
     """
     Pipeline completo de fuzzificación.
@@ -211,7 +237,7 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
             var_metrica = _metricas_llm[0]
             print(f"✓ Métrica seleccionada por LLM: VAR_METRICA = {var_metrica!r}")
         else:
-            print(f"⚠️  Columnas ambiguas: {ambiguas}")
+            print(f"Columnas ambiguas: {ambiguas}")
             print(f"    Especifica: var_metrica_override = 'nombre_columna'")
             var_metrica = claras[0] if claras else ambiguas[0]
             print(f"    Usando por defecto: {var_metrica!r}")
@@ -220,6 +246,20 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
     result = df_raw[[var_tiempo, var_metrica]].copy()
     result[var_tiempo] = pd.to_datetime(result[var_tiempo], errors='coerce')
     result = result.dropna(subset=[var_tiempo])
+
+    # Limpiar métrica antes de fuzzificar
+    try:
+        result[var_metrica] = _limpiar_metrica(result[var_metrica])
+    except ValueError as e:
+        raise ValueError(str(e)) from e
+
+    n_original = len(result)
+    result = result.dropna(subset=[var_metrica])
+    n_limpio = len(result)
+    if n_original != n_limpio:
+        print(f"  Limpieza de métrica: {n_original - n_limpio} "
+              f"filas eliminadas ({n_original} → {n_limpio})")
+
     result = result.sort_values(var_tiempo).reset_index(drop=True)
 
     t0    = result[var_tiempo].min()
