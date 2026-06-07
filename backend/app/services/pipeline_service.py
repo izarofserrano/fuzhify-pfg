@@ -13,7 +13,7 @@ from uuid import UUID
 import pandas as pd
 
 from app.config import settings
-from app.core.fuzzy import FuzzyConfig, fuzzificar
+from app.core.fuzzy import FuzzyConfig, fuzzificar, _leer_csv
 from app.core.mining import MinerConfig, minar_reglas
 from app.core.nlg import NLGConfig, generar_informe
 from app.db import AsyncSessionLocal
@@ -74,7 +74,7 @@ async def ejecutar_pipeline(job_id: UUID) -> None:
 
         # ── Fase 1: Fuzzificación (CPU-bound, sin contacto con BD) ───────────
         def _fuzzificar():
-            df = pd.read_csv(ruta_entrada)
+            df = _leer_csv(ruta_entrada)
             cfg = FuzzyConfig(
                 var_metrica_override=metrica,
                 pais_festivos=parametros.get("pais", "ES"),

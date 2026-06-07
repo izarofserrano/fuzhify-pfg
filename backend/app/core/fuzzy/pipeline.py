@@ -158,6 +158,40 @@ def detectar_metricas_candidatas(df: pd.DataFrame, config: FuzzyConfig) -> dict:
     }
 
 
+def _leer_csv(ruta_o_buffer) -> pd.DataFrame:
+    """
+    Lee un CSV tolerando separadores coma, punto y coma y tabulador,
+    y convierte columnas objeto con coma decimal a float.
+    Acepta tanto rutas de fichero como objetos BytesIO.
+    """
+    for sep in [',', ';', '\t']:
+        try:
+            if hasattr(ruta_o_buffer, 'seek'):
+                ruta_o_buffer.seek(0)
+            df = pd.read_csv(ruta_o_buffer, sep=sep,
+                             encoding='utf-8',
+                             on_bad_lines='skip')
+            if df.shape[1] <= 1:
+                continue
+            # Convertir comas decimales en columnas objeto
+            for col in df.columns:
+                if df[col].dtype == object:
+                    conv = pd.to_numeric(
+                        df[col].astype(str)
+                            .str.replace(',', '.', regex=False),
+                        errors='coerce'
+                    )
+                    if conv.notna().mean() > 0.7:
+                        df[col] = conv
+            return df
+        except Exception:
+            continue
+    raise ValueError(
+        "No se pudo leer el CSV. Separadores soportados: "
+        "coma, punto y coma, tabulador."
+    )
+
+
 def _limpiar_metrica(serie: pd.Series, centinelas: list = None) -> pd.Series:
     """
     Limpia la columna de métrica antes de fuzzificar.

@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.fuzzy import FuzzyConfig, detectar_metricas_candidatas
+from app.core.fuzzy import FuzzyConfig, detectar_metricas_candidatas, _leer_csv
 from app.core.global_report import construir_informe_global
 from app.core.pdf_export import generar_pdf_informe
 from app.db import AsyncSessionLocal, get_db
@@ -121,9 +121,9 @@ async def detect_metric(
 
     # Leer CSV para detectar métricas
     try:
-        df = pd.read_csv(io.BytesIO(contenido))
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail=f"CSV inválido: {exc}")
+        df = _leer_csv(io.BytesIO(contenido))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
     fuzzy_config = FuzzyConfig(
         pais_festivos=params.pais,
