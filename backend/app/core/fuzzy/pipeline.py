@@ -187,7 +187,7 @@ def _leer_csv(ruta_o_buffer) -> pd.DataFrame:
         except Exception:
             continue
     raise ValueError(
-        "No se pudo leer el CSV. Separadores soportados: "
+        "No se ha podido leer el CSV. Separadores soportados: "
         "coma, punto y coma, tabulador."
     )
 
@@ -211,7 +211,7 @@ def _limpiar_metrica(serie: pd.Series, centinelas: list = None) -> pd.Series:
 
     if serie.empty:
         raise ValueError(
-            f"La columna de métrica quedó vacía tras la limpieza. "
+            f"La columna de métrica se ha quedado vacía tras la limpieza. "
             f"Revisa que el CSV no tenga solo valores nulos o centinela."
         )
 
@@ -230,11 +230,11 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
     # ── Paso 1: detectar / confirmar variable temporal ────────────────────────
     if config.var_tiempo_override is not None:
         var_tiempo = config.var_tiempo_override
-        print(f"✓ VAR_TIEMPO forzado manualmente: {var_tiempo!r}")
+        print(f"VAR_TIEMPO forzado manualmente: {var_tiempo!r}")
     else:
         var_tiempo, df_raw = _detectar_var_tiempo(df_raw)
         if var_tiempo:
-            print(f"✓ VAR_TIEMPO detectado: {var_tiempo!r}")
+            print(f"VAR_TIEMPO detectado: {var_tiempo!r}")
 
     if var_tiempo is None:
         raise ValueError("No se pudo detectar la variable temporal. "
@@ -246,7 +246,7 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
 
     if config.var_metrica_override is not None:
         var_metrica = config.var_metrica_override
-        print(f"✓ Override manual: VAR_METRICA = {var_metrica!r}")
+        print(f"Override manual: VAR_METRICA = {var_metrica!r}")
 
     elif len(_todas) == 0:
         raise ValueError("No se detectó ninguna métrica candidata. "
@@ -254,11 +254,11 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
 
     elif len(_todas) == 1:
         var_metrica = _todas[0]
-        print(f"✓ Detección automática unívoca: VAR_METRICA = {var_metrica!r}")
+        print(f"Detección automática unívoca: VAR_METRICA = {var_metrica!r}")
 
     elif len(ambiguas) == 0:
         var_metrica = claras[0]
-        print(f"✓ Varias métricas detectadas: {claras}")
+        print(f"Varias métricas detectadas: {claras}")
         print(f"  Usando: {var_metrica!r}")
 
     else:
@@ -269,7 +269,7 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
 
         if _metricas_llm:
             var_metrica = _metricas_llm[0]
-            print(f"✓ Métrica seleccionada por LLM: VAR_METRICA = {var_metrica!r}")
+            print(f"Métrica seleccionada por LLM: VAR_METRICA = {var_metrica!r}")
         else:
             print(f"Columnas ambiguas: {ambiguas}")
             print(f"    Especifica: var_metrica_override = 'nombre_columna'")
