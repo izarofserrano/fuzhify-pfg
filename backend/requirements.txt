@@ -14,5 +14,5 @@ weasyprint
 matplotlib
 jinja2
 markdown
-
+pytest
 requests
