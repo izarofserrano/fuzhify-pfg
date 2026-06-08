@@ -143,7 +143,7 @@ def detectar_metricas_candidatas(df: pd.DataFrame, config: FuzzyConfig) -> dict:
     granularidad_s = float(_diffs.median()) if len(_diffs) else 3600.0
 
     # Ejecutar heurística
-    claras, ambiguas, info = _heuristica(df_raw, var_tiempo)
+    claras, ambiguas, info = _detectar_var_metrica(df_raw, var_tiempo)
 
     candidatas = []
     for col in claras:
@@ -241,7 +241,7 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
                          "Especifica var_tiempo_override en FuzzyConfig.")
 
     # ── Paso 2: detectar / confirmar variable métrica ─────────────────────────
-    claras, ambiguas, info_heur = _heuristica(df_raw, var_tiempo)
+    claras, ambiguas, info_heur = _detectar_var_metrica(df_raw, var_tiempo)
     _todas = claras + ambiguas
 
     if config.var_metrica_override is not None:

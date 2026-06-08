@@ -244,7 +244,7 @@ def _tokenizar(col):
     return set(re.split(r'[_\-\s]+', col.lower()))
 
 
-def _heuristica(df, var_tiempo):
+def _detectar_var_metrica(df, var_tiempo):
     N = len(df)
     claras, ambiguas, info = [], [], {}
     for col in df.columns:
