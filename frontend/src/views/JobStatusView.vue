@@ -109,7 +109,7 @@
             <dt>Estado</dt>
             <dd>{{ job.estado }}</dd>
           </div>
-          <div class="meta-item">
+          <div class="meta-item" v-if="job.estado !== 'completado'">
             <dt>Fase actual</dt>
             <dd>{{ job.fase_actual ?? '—' }}</dd>
           </div>
