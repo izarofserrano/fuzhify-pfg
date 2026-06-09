@@ -52,6 +52,7 @@ def _job_to_dict(job) -> dict:
         "id": job.id,
         "estado": job.estado,
         "fase_actual": job.fase_actual,
+        "nombre_dataset": job.nombre_dataset,
         "metrica_seleccionada": job.metrica_seleccionada,
         "error_mensaje": job.error_mensaje,
         "creado_en": job.creado_en,

@@ -172,9 +172,8 @@ function formatFecha(iso) {
   })
 }
 
-// El nombre del dataset no está en JobStatus, usamos el id truncado como fallback
 function nombreDataset(job) {
-  return `Job ${job.id.substring(0, 8)}…`
+  return job.nombre_dataset || `Job ${job.id.substring(0, 8)}…`
 }
 </script>
 

@@ -55,6 +55,7 @@ class JobStatus(BaseModel):
     id: UUID
     estado: str
     fase_actual: str | None
+    nombre_dataset: str
     metrica_seleccionada: str | None
     error_mensaje: str | None
     creado_en: datetime
