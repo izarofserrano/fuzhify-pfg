@@ -61,10 +61,11 @@ def _llamar_llm(prompt, proveedor=None, modelo=None, api_key=None):
             import requests as _req
             url = (
                 f"https://generativelanguage.googleapis.com/v1beta/models/"
-                f"{modelo}:generateContent?key={api_key}"
+                f"{modelo}:generateContent"
             )
             resp = _req.post(
                 url,
+                headers={"x-goog-api-key": api_key},
                 json={"contents": [{"parts": [{"text": prompt}]}]},
                 timeout=15,
             )

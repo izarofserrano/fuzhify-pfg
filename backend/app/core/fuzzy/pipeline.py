@@ -13,7 +13,7 @@ from .constants import (
     N_MUESTRAS_RAMPA, USAR_LLM_FALLBACK, PROVEEDOR_LLM,
     PAIS_FESTIVOS, SUBDIV_FESTIVOS,
 )
-from .heuristic import _detectar_var_tiempo, _heuristica, _detectar_metrica_via_llm
+from .heuristic import _detectar_var_tiempo, _detectar_var_metrica, _detectar_metrica_via_llm
 from .blocks import (
     gen_t_anios, gen_t_meses, gen_t_dias, gen_t_horas,
     gen_t_laborables, gen_t_festivos, gen_t_quincenas,
