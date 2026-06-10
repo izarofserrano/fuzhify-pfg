@@ -123,7 +123,7 @@ def _nivel_franja_dominante(df_reglas, horas):
 def _perfil_dia_sensor(df):
     """
     Genera una cadena compacta del perfil diario de un sensor.
-    Ejemplo: "Madrugada 🔵 | Mañana 🟡 | Tarde 🟠 | Noche 🟢"
+    Ejemplo: "Madrugada | Mañana  | Tarde  | Noche "
     """
     partes = []
     for franja_tok, horas in HORAS_FRANJA_MAP.items():

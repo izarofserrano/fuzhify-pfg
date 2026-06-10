@@ -79,12 +79,12 @@ def grupo_a_parrafo(filas, nombre_metrica, consecuente, min_reglas, modo="tecnic
     desc_v = diccionario.get(consecuente, consecuente)
     filas_ordenadas = sorted(filas, key=lambda r: -r["lift"])
 
-    # ── Caso A: grupo pequeño → frases individuales ───────────────────────
+    # Caso A: grupo pequeño → frases individuales 
     if len(filas_ordenadas) < min_reglas:
         return "\n".join(regla_a_frase(f, nombre_metrica, modo=modo)
                          for f in filas_ordenadas)
 
-    # ── Caso B: grupo amplio → párrafo narrativo ──────────────────────────
+    # Caso B: grupo amplio → párrafo narrativo 
     conjuntos = [parsear_antecedente(f["antecedente"]) for f in filas_ordenadas]
     contexto_comun = conjuntos[0].copy()
     for c in conjuntos[1:]:
@@ -93,7 +93,7 @@ def grupo_a_parrafo(filas, nombre_metrica, consecuente, min_reglas, modo="tecnic
     # Calcular tokens específicos de cada regla
     especificos = [c - contexto_comun for c in conjuntos]
 
-    # ── Caso B.1: los detalles diferenciales son solo años → frase simple ──
+    # Caso B.1: los detalles diferenciales son solo años → frase simple 
     solo_anios = all(e <= ANIOS or not e for e in especificos)
     if solo_anios:
         desc_ctx = verbalizar_antecedente(contexto_comun) if contexto_comun \
@@ -113,7 +113,7 @@ def grupo_a_parrafo(filas, nombre_metrica, consecuente, min_reglas, modo="tecnic
                 f"{prefijo} {desc_ctx}, la {nombre_metrica} tiende a ser {desc_v}."
             )
 
-    # ── Caso B.2: párrafo narrativo completo ──────────────────────────────
+    # Caso B.2: párrafo narrativo completo
     detalles = []
     for f, especif in zip(filas_ordenadas, especificos):
         if especif:
@@ -851,7 +851,7 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
 
         desc_v = ETIQUETA_METRICA.get(consecuente, consecuente)
         emoji  = NIVEL_EMOJI.get(consecuente, "")
-        # FIX: umbral de solapamiento 0.4 para recuperar agrupamiento
+        # Ubral de solapamiento 0.4 para recuperar agrupamiento
         # tras el sort por lift. El sort es necesario para que el párrafo
         # narrativo use la regla más fuerte como ancla del grupo.
         grupos   = agrupar_reglas(df_c, umbral_solapamiento=0.4)

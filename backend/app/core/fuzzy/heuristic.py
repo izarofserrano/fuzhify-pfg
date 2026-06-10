@@ -26,7 +26,7 @@ _LLM_API_KEY = os.environ.get(
 def _llamar_llm(prompt, proveedor=None, modelo=None, api_key=None):
     """
     Interfaz única de LLM. Recibe un prompt (str), devuelve texto (str)
-    o None si falla. Toda la dependencia de proveedor está AQUÍ y solo aquí.
+    o None si falla. Toda la dependencia de proveedor está aquí.
 
     Para añadir un proveedor nuevo: añade una rama. El resto del código
     (perfilado, parseo, degradación) no se entera de qué proveedor es.
@@ -109,7 +109,7 @@ def _perfil_columnas_para_llm(df, var_tiempo, columnas):
 
 def _detectar_metrica_via_llm(df, var_tiempo, candidatas, config=None):
     """
-    Usa _llamar_llm (agnóstico al proveedor) para clasificar columnas.
+    Usa _llamar_llm para clasificar columnas.
     Devuelve lista de nombres de columna, o None si falla / no disponible.
     Degrada con elegancia: cualquier problema → None.
     """

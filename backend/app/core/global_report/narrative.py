@@ -68,7 +68,7 @@ def parrafo_introductorio(tabla_cross, nombre_conjunto: str = ""):
 def parrafo_hallazgos_comunes(comunes, n_sensores_total, nombre_conjunto: str = ""):
     if n_sensores_total == 1:
         return (
-            "> ℹ️ El análisis comparativo de patrones compartidos requiere "
+            "> El análisis comparativo de patrones compartidos requiere "
             "al menos 2 fuentes de datos."
         )
     if not comunes:
@@ -135,8 +135,8 @@ def parrafo_atipicos(atipicos, tabla_cross):
 
 
 def parrafo_outliers(tabla_cross):
-    con_alto = tabla_cross[tabla_cross["Outlier alto"] == "✅"]["Sensor"].tolist()
-    con_bajo = tabla_cross[tabla_cross["Outlier bajo"] == "✅"]["Sensor"].tolist()
+    con_alto = tabla_cross[tabla_cross["Outlier alto"] == ""]["Sensor"].tolist()
+    con_bajo = tabla_cross[tabla_cross["Outlier bajo"] == ""]["Sensor"].tolist()
     partes = []
     if con_alto:
         partes.append(

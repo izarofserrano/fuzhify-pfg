@@ -21,7 +21,7 @@ from .pipeline import minar_reglas, MinerConfig
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Minería de reglas de asociación difusas (src02)"
+        description="Minería de reglas de asociación difusas (M02)"
     )
     parser.add_argument("--fuzzy", required=True, help="CSV fuzzificado de entrada")
     parser.add_argument("--out",   required=True, help="CSV de reglas de salida")

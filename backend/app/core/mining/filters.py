@@ -70,7 +70,7 @@ def filtrar_por_jerarquia(df_reglas, jerarquia, min_confianza):
 def filtrar_top_por_consecuente(df_reglas, top_n):
     """
     Limita el número máximo de reglas por consecuente
-    para evitar saturación en src03.
+    para evitar saturación en el módulo de NLG.
     """
     return (df_reglas
             .sort_values("lift", ascending=False)

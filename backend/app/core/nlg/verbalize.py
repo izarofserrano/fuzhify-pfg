@@ -258,9 +258,9 @@ def agrupar_reglas(df_consecuente, umbral_solapamiento=0.4):
     """
     Agrupa reglas con el mismo consecuente y contexto similar en un párrafo.
 
-    FIX v3: umbral de solapamiento bajado de 0.5 → 0.4 para recuperar el
+    Umbral de solapamiento 0.4 para recuperar el
     agrupamiento que se perdía al ordenar por lift antes de iterar.
-    El primer registro (mayor lift) actúa como ancla del grupo; el resto
+    El primer registro (mayor lift) actúa como ancla del grupo. El resto
     se adhiere si comparte al menos el 40 % de tokens (excl. años/festivos).
 
     Parámetro umbral_solapamiento: puede sobreescribirse por caller

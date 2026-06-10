@@ -25,7 +25,7 @@ CSV informe global → src034 (informe global)           → informe .md
    se queda fea.
 
 2. **Umbrales y constantes intocables.** TOL_HORAS=0.5, TOLERANCIA=0.2,
-   N_MUESTRAS_RAMPA=2, MIN_SOPORTE=0.005, MIN_CONFIANZA=0.50, escala
+   N_MUESTRAS_RAMPA=3, MIN_SOPORTE=0.005, MIN_CONFIANZA=0.50, escala
    adverbial (1.5/2.0/3.0), TOP_POR_CONSECUENTE=10, K_BEAM=10, MAX_PROF=3.
    Todas van a `core/<modulo>/constants.py`. Nadie las toca.
 

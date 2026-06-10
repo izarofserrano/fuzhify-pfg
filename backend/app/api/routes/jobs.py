@@ -68,26 +68,7 @@ async def _get_job_or_404(session: AsyncSession, job_id: UUID) -> Job:
     return job
 
 
-# ── 7. Listar jobs (antes de las rutas con {job_id} para evitar ambigüedad) ──
-
-@router.get("/jobs", response_model=list[JobStatus])
-async def list_jobs(
-    estado: str | None = Query(None, description="Filtrar por estado"),
-    limit: int = Query(20, ge=1, le=100),
-    session: AsyncSession = Depends(get_db),
-):
-    """Lista los jobs más recientes, con filtro opcional por estado."""
-    query = select(Job)
-    if estado is not None:
-        query = query.where(Job.estado == estado)
-    query = query.order_by(Job.creado_en.desc()).limit(limit)
-
-    resultado = await session.execute(query)
-    jobs = resultado.scalars().all()
-    return [JobStatus.model_validate(_job_to_dict(j)) for j in jobs]
-
-
-# ── 1. Detectar métricas candidatas ──────────────────────────────────────────
+# 1. Detectar métricas candidatas
 
 @router.post("/detect-metric", response_model=DetectMetricResponse, status_code=201)
 async def detect_metric(
@@ -159,7 +140,7 @@ async def detect_metric(
     )
 
 
-# ── 2. Confirmar métrica y lanzar pipeline ────────────────────────────────────
+# 2. Confirmar métrica y lanzar pipeline
 
 @router.post("/jobs/{job_id}/run", response_model=JobStatus, status_code=202)
 async def run_job(
@@ -201,7 +182,7 @@ async def run_job(
     return JobStatus.model_validate(job_dict)
 
 
-# ── 3. Consultar estado del job ───────────────────────────────────────────────
+# 3. Consultar estado del job
 
 @router.get("/jobs/{job_id}", response_model=JobStatus)
 async def get_job(
@@ -213,7 +194,7 @@ async def get_job(
     return JobStatus.model_validate(_job_to_dict(job))
 
 
-# ── 4. Listar reglas del job ──────────────────────────────────────────────────
+# 4. Listar reglas del job 
 
 @router.get("/jobs/{job_id}/reglas", response_model=ReglasResponse)
 async def get_reglas(
@@ -242,7 +223,7 @@ async def get_reglas(
     return ReglasResponse(total=total, items=items)
 
 
-# ── 5. Informe en markdown ────────────────────────────────────────────────────
+# 5. Informe en markdown 
 
 @router.get("/jobs/{job_id}/informe")
 async def get_informe(
@@ -259,7 +240,7 @@ async def get_informe(
     return Response(content=contenido, media_type="text/markdown")
 
 
-# ── 6. Descargar archivos del job ─────────────────────────────────────────────
+# 6. Descargar archivos del job 
 
 _ATRIBUTO_ARCHIVO: dict[str, str] = {
     "entrada": "ruta_csv_entrada",
@@ -292,8 +273,26 @@ async def descargar_archivo(
         filename=Path(ruta).name,
     )
 
+# 7. Listar jobs (antes de las rutas con {job_id} para evitar ambigüedad) 
 
-# ── 8. Informe en PDF ────────────────────────────────────────────────────────
+@router.get("/jobs", response_model=list[JobStatus])
+async def list_jobs(
+    estado: str | None = Query(None, description="Filtrar por estado"),
+    limit: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_db),
+):
+    """Lista los jobs más recientes, con filtro opcional por estado."""
+    query = select(Job)
+    if estado is not None:
+        query = query.where(Job.estado == estado)
+    query = query.order_by(Job.creado_en.desc()).limit(limit)
+
+    resultado = await session.execute(query)
+    jobs = resultado.scalars().all()
+    return [JobStatus.model_validate(_job_to_dict(j)) for j in jobs]
+
+
+# 8. Informe en PDF 
 
 @router.get("/jobs/{job_id}/informe.pdf")
 async def descargar_informe_pdf(
@@ -331,7 +330,7 @@ async def descargar_informe_pdf(
     )
 
 
-# ── 9. Informe global comparativo ─────────────────────────────────────────────
+# 9. Informe global comparativo
 
 @router.post("/informe-global")
 async def informe_global(
