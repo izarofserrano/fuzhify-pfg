@@ -72,7 +72,42 @@ docker compose up -d
 
 # Solo si hay migraciones nuevas en alembic/versions/:
 docker compose exec backend alembic upgrade head
+```## Configuración del fallback LLM (opcional)
+
+El sistema detecta automáticamente la columna temporal y la métrica candidata mediante heurística estadística. En casos ambiguos puede apoyarse en un modelo de lenguaje externo. Esta funcionalidad está **desactivada por defecto** y el sistema funciona correctamente sin ella.
+
+Si quieres activarla, edita el fichero `.env`:
+
+```bash
+# Activa el fallback LLM (false por defecto)
+USAR_LLM_FALLBACK=true
+
+# Proveedor: "gemini", "anthropic" u "openai"
+PROVEEDOR_LLM=gemini
 ```
+
+Según el proveedor elegido, añade la variable de entorno correspondiente:
+
+```bash
+# Si usas Gemini
+GEMINI_API_KEY=tu_api_key_aqui
+
+# Si usas Anthropic
+ANTHROPIC_API_KEY=tu_api_key_aqui
+
+# Si usas OpenAI
+OPENAI_API_KEY=tu_api_key_aqui
+```
+
+### Dónde obtener cada API key
+
+| Proveedor | URL |
+|---|---|
+| Gemini | https://aistudio.google.com/app/apikey |
+| Anthropic | https://console.anthropic.com/settings/keys |
+| OpenAI | https://platform.openai.com/api-keys |
+
+> Solo es necesaria la key del proveedor seleccionado en `PROVEEDOR_LLM`. Si `USAR_LLM_FALLBACK=false`, esta configuración se ignora por completo.
 
 ### Servicios disponibles
 

@@ -18,7 +18,7 @@ N_MUESTRAS_RAMPA = 3
 
 # ── LLM fallback ─────────────────────────────────────────────────────────────
 USAR_LLM_FALLBACK = True
-PROVEEDOR_LLM     = "gemini"
+PROVEEDOR_LLM     = "gemini" # "gemini", "anthropic" u "openai"
 
 _MODELO_LLM = {
     "gemini":    "gemini-2.5-flash",
