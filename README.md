@@ -72,7 +72,8 @@ docker compose up -d
 
 # Solo si hay migraciones nuevas en alembic/versions/:
 docker compose exec backend alembic upgrade head
-```## Configuración del fallback LLM (opcional)
+```
+## Configuración del fallback LLM (opcional)
 
 El sistema detecta automáticamente la columna temporal y la métrica candidata mediante heurística estadística. En casos ambiguos puede apoyarse en un modelo de lenguaje externo. Esta funcionalidad está **desactivada por defecto** y el sistema funciona correctamente sin ella.
 
