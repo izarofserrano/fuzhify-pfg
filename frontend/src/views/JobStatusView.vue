@@ -72,6 +72,20 @@
               Ver reglas
             </button>
             <a
+              :href="`${apiBase}/jobs/${jobId}/descargar/reglas`"
+              target="_blank"
+              class="btn-secondary"
+            >
+              Descargar reglas CSV
+            </a>
+            <a
+              :href="`${apiBase}/jobs/${jobId}/fuzzy.csv`"
+              target="_blank"
+              class="btn-secondary"
+            >
+              Descargar fuzzy CSV
+            </a>
+            <a
               :href="`${apiBase}/jobs/${jobId}/descargar/informe`"
               target="_blank"
               class="btn-secondary"
@@ -85,13 +99,7 @@
             >
               Descargar PDF
             </a>
-            <a
-              :href="`${apiBase}/jobs/${jobId}/descargar/reglas`"
-              target="_blank"
-              class="btn-secondary"
-            >
-              Descargar reglas CSV
-            </a>
+            
           </div>
         </div>
 

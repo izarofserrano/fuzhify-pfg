@@ -330,7 +330,36 @@ async def descargar_informe_pdf(
     )
 
 
-# 9. Informe global comparativo
+# 9. Descargar CSV fuzzificado
+
+@router.get("/jobs/{job_id}/fuzzy.csv")
+async def descargar_fuzzy_csv(
+    job_id: UUID,
+    session: AsyncSession = Depends(get_db),
+):
+    """Descarga el CSV fuzzificado (solo si el job está completado)."""
+    job = await _get_job_or_404(session, job_id)
+
+    if job.estado != "completado":
+        raise HTTPException(status_code=404, detail="El job no está completado")
+
+    ruta = job.ruta_csv_fuzzy
+    if not ruta or not Path(ruta).exists():
+        raise HTTPException(status_code=404, detail="El archivo fuzzy CSV no está disponible para este job")
+
+    nombre_base = f"{job.nombre_dataset}_{job.metrica_seleccionada}_fuzzy.csv"
+    nombre_archivo = nombre_base.replace(" ", "_").replace("/", "_")
+
+    return FileResponse(
+        path=ruta,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{nombre_archivo}"',
+        },
+    )
+
+
+# 10. Informe global comparativo
 
 @router.post("/informe-global")
 async def informe_global(
