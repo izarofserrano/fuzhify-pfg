@@ -36,7 +36,7 @@ def main():
     )
 
     print(f"Cargando {args.csv} …")
-    df = pd.read_csv(args.csv)
+    df = pd._leer_csv(args.csv)
 
     df_fuzzy = fuzzificar(df, config)
 
