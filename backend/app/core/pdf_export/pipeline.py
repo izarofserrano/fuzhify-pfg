@@ -50,11 +50,14 @@ def generar_pdf_informe(job) -> bytes:
         df_top20=df_top20,
     )
 
-    for ruta in (ruta_scatter, ruta_top15, ruta_fuzzy):
-        try:
-            os.unlink(ruta)
-        except OSError:
-            pass
+    try:
+        # base_url permite que WeasyPrint resuelva href="styles.css" relativo al directorio de plantillas
+        pdf_bytes = HTML(string=html_str, base_url=str(_TEMPLATE_DIR)).write_pdf()
+    finally:
+        for ruta in (ruta_scatter, ruta_top15, ruta_fuzzy):
+            try:
+                os.unlink(ruta)
+            except OSError:
+                pass
 
-    # base_url permite que WeasyPrint resuelva href="styles.css" relativo al directorio de plantillas
-    return HTML(string=html_str, base_url=str(_TEMPLATE_DIR)).write_pdf()
+    return pdf_bytes
