@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app.core.mining import minar_reglas, MinerConfig
 
 # ── Paths de referencia (con fallback a los de data/notebook_outputs/) ────────
-_BASE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "notebook_outputs")
+_BASE = os.path.join(os.path.dirname(__file__), "..", "data", "notebook_outputs")
 
 _DATASETS = [
     {
