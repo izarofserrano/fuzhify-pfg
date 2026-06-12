@@ -30,7 +30,15 @@ def es_combinacion_valida(antecedente_str, grupos_excluyentes=None):
     # Regla 2: mes y estación deben ser compatibles
     for estacion, meses_validos in MESES_POR_ESTACION.items():
         if estacion in tokens:
-            meses_en_regla = tokens & grupos_excluyentes[0] if grupos_excluyentes else set()
+            NOMBRES_MESES = {
+                "t_Ene","t_Feb","t_Marz","t_Abr","t_May","t_Jun",
+                "t_Jul","t_Ago","t_Sep","t_Oct","t_Nov","t_Dic"
+            }
+            grupo_meses = next(
+                (g for g in grupos_excluyentes if g & NOMBRES_MESES),
+                set()
+            )
+            meses_en_regla = tokens & grupo_meses
             if meses_en_regla - meses_validos:
                 return False
 
@@ -45,8 +53,8 @@ def categoria_dominante(tokens):
            quincenas > años
     """
     if tokens & HORAS:      return "hora"
-    if tokens & MINUTOS:    return "minuto"
     if tokens & FRANJAS:    return "franja"
+    if tokens & MINUTOS:    return "minuto"
     if tokens & DIAS:       return "dia_semana"
     if tokens & FESTIVOS:   return "festivo"
     if tokens & TIPO_DIA:   return "tipo_dia"

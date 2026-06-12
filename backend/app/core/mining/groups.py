@@ -62,7 +62,6 @@ def _combinacion_valida(tokens, grupos_excluyentes):
     )
     for estacion, meses_validos in MESES_POR_ESTACION.items():
         if estacion in tokens:
-            meses_en_regla = tokens & grupos_excluyentes[0]
             meses_en_regla = tokens & grupo_meses
             if meses_en_regla - meses_validos:
                 return False

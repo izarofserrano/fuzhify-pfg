@@ -79,7 +79,7 @@ FRANJAS    = {"t_Madrugada", "t_Mañana", "t_Tarde", "t_Noche"}
 MESES      = {"t_Ene","t_Feb","t_Marz","t_Abr","t_May","t_Jun",
               "t_Jul","t_Ago","t_Sep","t_Oct","t_Nov","t_Dic"}
 DIAS       = {"t_Lun","t_Mar","t_Mie","t_Jue","t_Vie","t_Sab","t_Dom"}
-ANIOS      = {"t_2024","t_2025"}
+ANIOS      = {f"t_{y}" for y in range(2000, 2051)}
 TIPO_DIA   = {"t_Laborable","t_FinSemana"}
 QUINCENAS  = {"t_Q1mes","t_Q2mes"}
 MINUTOS    = {"t_M00","t_M15","t_M30","t_M45"}
