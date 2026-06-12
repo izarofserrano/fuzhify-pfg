@@ -135,8 +135,8 @@ def parrafo_atipicos(atipicos, tabla_cross):
 
 
 def parrafo_outliers(tabla_cross):
-    con_alto = tabla_cross[tabla_cross["Outlier alto"] == ""]["Sensor"].tolist()
-    con_bajo = tabla_cross[tabla_cross["Outlier bajo"] == ""]["Sensor"].tolist()
+    con_alto = tabla_cross[tabla_cross["Outlier alto"] == "✅"]["Sensor"].tolist()
+    con_bajo = tabla_cross[tabla_cross["Outlier bajo"] == "✅"]["Sensor"].tolist()
     partes = []
     if con_alto:
         partes.append(
