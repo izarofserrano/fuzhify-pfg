@@ -76,7 +76,11 @@ def plot_fuzzificacion_metrica(df_fuzzy: pd.DataFrame) -> str:
     Proporción de activación (> 0) de cada variable difusa de la métrica (v_*).
     Devuelve ruta al PNG.
     """
-    cols_v = [c for c in df_fuzzy.columns if c.startswith("v_")]
+    COLS_V_RELEVANTES = {
+        "v_MuyBaja", "v_Baja", "v_Media", "v_Alta", "v_MuyAlta",
+        "v_OutlierBajo", "v_OutlierAlto", "v_Mediana"
+    }
+    cols_v = [c for c in df_fuzzy.columns if c in COLS_V_RELEVANTES]
 
     fig, ax = plt.subplots(figsize=(7, 4))
     if not cols_v:

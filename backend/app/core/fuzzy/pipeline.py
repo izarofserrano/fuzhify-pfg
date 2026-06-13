@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Optional
 
+import numpy as np
 import pandas as pd
 
 from .constants import (
@@ -64,6 +65,9 @@ class FuzzyConfig:
     usar_llm_fallback: bool         = USAR_LLM_FALLBACK
     proveedor_llm:     str          = PROVEEDOR_LLM
     llm_api_key:       Optional[str] = None
+
+    # Valores centinela a eliminar de la métrica (vacío = no eliminar ninguno)
+    centinelas: list = field(default_factory=lambda: [-1, -200, 9999, -9999])
 
     # Calculado en tiempo de ejecución (no expuesto al usuario)
     granularidad_s: float = field(default=0.0, repr=False)
@@ -241,7 +245,12 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
                          "Especifica var_tiempo_override en FuzzyConfig.")
 
     # ── Paso 2: detectar / confirmar variable métrica ─────────────────────────
-    claras, ambiguas, info_heur = _detectar_var_metrica(df_raw, var_tiempo)
+    _df_para_deteccion = df_raw.copy()
+    for col in _df_para_deteccion.select_dtypes(include='number').columns:
+        _df_para_deteccion[col] = _df_para_deteccion[col].replace(
+            config.centinelas, np.nan
+        )
+    claras, ambiguas, info_heur = _detectar_var_metrica(_df_para_deteccion, var_tiempo)
     _todas = claras + ambiguas
 
     if config.var_metrica_override is not None:
@@ -283,7 +292,7 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
 
     # Limpiar métrica antes de fuzzificar
     try:
-        result[var_metrica] = _limpiar_metrica(result[var_metrica])
+        result[var_metrica] = _limpiar_metrica(result[var_metrica], centinelas=config.centinelas)
     except ValueError as e:
         raise ValueError(str(e)) from e
 
@@ -305,9 +314,10 @@ def fuzzificar(df: pd.DataFrame, config: FuzzyConfig) -> pd.DataFrame:
     anio_inicio = result[var_tiempo].min().year
     anio_fin    = result[var_tiempo].max().year
 
-    _diffs_tmp = result[var_tiempo].diff().dt.total_seconds().dropna()
-    config.granularidad_s = float(_diffs_tmp.median()) if len(_diffs_tmp) else 3600.0
-    del _diffs_tmp
+    if config.granularidad_s == 0.0:
+        _diffs_tmp = result[var_tiempo].diff().dt.total_seconds().dropna()
+        config.granularidad_s = float(_diffs_tmp.median()) if len(_diffs_tmp) else 3600.0
+        del _diffs_tmp
 
     print(f"\nDataset: {len(result):,} filas | métrica: {var_metrica!r} "
           f"| granularidad: {config.granularidad_s:.0f}s")

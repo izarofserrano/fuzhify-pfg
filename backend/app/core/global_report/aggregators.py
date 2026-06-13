@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import math
 import os
 import re
 from collections import Counter, defaultdict
@@ -207,7 +208,7 @@ def patrones_compartidos(reglas_por_sensor, umbral=UMBRAL_PATRONES_COMPARTIDOS):
             apariciones[clave].add(sensor)
 
     n_sensores = len(set(s for s, _ in reglas_por_sensor.keys()))
-    umbral_n = max(2, int(n_sensores * umbral))
+    umbral_n = max(2, math.ceil(n_sensores * umbral))
 
     comunes = [
         {"antecedente": ant, "consecuente": cons,

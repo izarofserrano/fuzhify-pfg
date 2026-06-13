@@ -684,6 +684,7 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
     lineas.append(f"| **Dataset** | {dataset} |")
     lineas.append(f"| **Métrica** | {metrica} |")
     lineas.append(f"| **Fecha** | {fecha_actual} |")
+    lineas.append(f"| **Granularidad** | {granularidad_desc} |")
     lineas.append(f"| **min_soporte** | {config.min_soporte} |")
     lineas.append(f"| **min_confianza** | {config.min_confianza} |")
     lineas.append(f"| **lift_minimo** | {config.lift_minimo} |")

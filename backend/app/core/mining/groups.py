@@ -52,11 +52,20 @@ def _combinacion_valida(tokens, grupos_excluyentes):
             return False
 
     # Regla 2: mes y estación deben ser compatibles
+    NOMBRES_MESES = {
+        "t_Ene","t_Feb","t_Marz","t_Abr","t_May","t_Jun",
+        "t_Jul","t_Ago","t_Sep","t_Oct","t_Nov","t_Dic"
+    }
+    grupo_meses = next(
+        (g for g in grupos_excluyentes if g & NOMBRES_MESES),
+        set()
+    )
     for estacion, meses_validos in MESES_POR_ESTACION.items():
         if estacion in tokens:
-            meses_en_regla = tokens & grupos_excluyentes[0]
+            meses_en_regla = tokens & grupo_meses
             if meses_en_regla - meses_validos:
                 return False
+            
     # Regla 3: hora y franja deben ser compatibles
     HORAS_POR_FRANJA = {
         "t_Madrugada": {f"t_H{h:02d}" for h in range(0, 7)},
