@@ -115,23 +115,34 @@ def parrafo_atipicos(atipicos, tabla_cross):
             "Ninguna fuente de datos muestra desviaciones marcadas respecto al "
             "comportamiento medio del grupo en las métricas globales."
         )
-    por_sensor = defaultdict(list)
+
+    ETIQUETAS = {
+        "Reglas":          "número de patrones detectados",
+        "Conf. media (%)": "confianza media",
+        "Lift medio":      "fuerza de asociación media",
+        "Lift máx":        "fuerza de asociación máxima",
+    }
+
+    por_sensor = defaultdict(lambda: {"alto": [], "bajo": []})
     for a in atipicos:
-        por_sensor[a["sensor"]].append(a)
+        etiq = ETIQUETAS.get(a["metrica_global"], a["metrica_global"])
+        por_sensor[a["sensor"]][a["direccion"]].append(etiq)
+
+    # Deduplicar
+    for sensor in por_sensor:
+        por_sensor[sensor]["alto"] = list(dict.fromkeys(por_sensor[sensor]["alto"]))
+        por_sensor[sensor]["bajo"] = list(dict.fromkeys(por_sensor[sensor]["bajo"]))
 
     lineas = []
-    for sensor, lista in por_sensor.items():
+    for sensor, dirs in por_sensor.items():
         partes = []
-        for a in lista:
-            adj = "elevado" if a["direccion"] == "alto" else "reducido"
-            partes.append(
-                f"{a['metrica_global']} {adj} "
-                f"({a['valor']} vs mediana {a['mediana_grupo']})"
-            )
-        desc = "; ".join(partes)
-        lineas.append(f"- El sensor **{sensor}** presenta {desc}.")
+        if dirs["alto"]:
+            partes.append(f"valores por encima de la media en {', '.join(dirs['alto'])}")
+        if dirs["bajo"]:
+            partes.append(f"valores por debajo de la media en {', '.join(dirs['bajo'])}")
+        lineas.append(f"- **{sensor}**: {'; '.join(partes)}.")
 
-    return "Se detectan comportamientos atípicos:\n\n" + "\n".join(lineas)
+    return "Se detectan fuentes con comportamiento destacado respecto al grupo:\n\n" + "\n".join(lineas)
 
 
 def parrafo_outliers(tabla_cross):

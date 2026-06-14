@@ -22,16 +22,22 @@ from .constants import UMBRAL_ATIPICO_MAD, UMBRAL_PATRONES_COMPARTIDOS
 # ---------------------------------------------------------------------------
 
 def cargar_reglas_todos(rutas_reglas: list):
-    """
-    Devuelve (reglas_por_sensor, faltantes).
-    reglas_por_sensor: {(sensor, metrica): df_reglas}
-    Infiere sensor y metrica del nombre de fichero: {sensor}_{metrica}_reglas.csv
-    Los CSVs ausentes o vacíos se registran en faltantes.
-    """
     reglas = {}
     faltantes = []
 
-    for ruta in rutas_reglas:
+    for item in rutas_reglas:
+        # Acepta tanto str como tupla (ruta, sensor, metrica)
+        if isinstance(item, (list, tuple)) and len(item) == 3:
+            ruta, sensor, metrica = item
+        else:
+            ruta = item
+            nombre = Path(ruta).stem
+            m = re.match(r'^(.+)_([^_]+)_reglas$', nombre)
+            if m:
+                sensor, metrica = m.group(1), m.group(2)
+            else:
+                sensor, metrica = nombre, "desconocida"
+
         if not os.path.exists(ruta):
             faltantes.append(ruta)
             continue
@@ -39,12 +45,6 @@ def cargar_reglas_todos(rutas_reglas: list):
         if df.empty:
             faltantes.append(f"{ruta} (vacío)")
             continue
-        nombre = Path(ruta).stem  # e.g. "3600_intensidad_reglas"
-        m = re.match(r'^(.+)_([^_]+)_reglas$', nombre)
-        if m:
-            sensor, metrica = m.group(1), m.group(2)
-        else:
-            sensor, metrica = nombre, "desconocida"
         reglas[(sensor, metrica)] = df
 
     return reglas, faltantes

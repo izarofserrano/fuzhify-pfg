@@ -8,6 +8,8 @@ import uuid as uuid_module
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
+import traceback
+
 
 import pandas as pd
 from fastapi import (
@@ -270,7 +272,7 @@ async def descargar_archivo(
 
     return FileResponse(
         path=ruta,
-        filename=Path(ruta).name,
+        filename=f"{Path(job.nombre_dataset).stem}_{job.metrica_seleccionada}_{Path(ruta).name}",
     )
 
 # 7. Listar jobs (antes de las rutas con {job_id} para evitar ambigüedad) 
@@ -366,8 +368,9 @@ async def informe_global(
     body: InformeGlobalRequest,
     session: AsyncSession = Depends(get_db),
 ):
-    """Genera un informe global comparativo a partir de varios jobs completados."""
-    rutas_reglas: list[str] = []
+    rutas_reglas: list = []
+    nombre_conjunto_parts = []
+
     for jid in body.job_ids:
         job = await _get_job_or_404(session, jid)
         if job.estado != "completado":
@@ -380,11 +383,18 @@ async def informe_global(
                 status_code=409,
                 detail=f"Job {jid} no tiene archivo de reglas",
             )
-        rutas_reglas.append(job.ruta_csv_reglas)
+        # Construir nombre con formato esperado por cargar_reglas_todos
+        sensor  = Path(job.nombre_dataset).stem  # quita extensión si la tiene
+        metrica = job.metrica_seleccionada or "desconocida"
+        rutas_reglas.append((job.ruta_csv_reglas, sensor, metrica))
+        nombre_conjunto_parts.append(sensor)
+
+    nombre_conjunto = ", ".join(sorted(set(nombre_conjunto_parts)))
 
     try:
-        informe_md = construir_informe_global(rutas_reglas)
+        informe_md = construir_informe_global(rutas_reglas, nombre_conjunto)
     except Exception as exc:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(exc))
 
     return Response(content=informe_md, media_type="text/markdown")
