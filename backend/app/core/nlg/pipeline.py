@@ -33,11 +33,17 @@ from .verbalize import (
     franja_de_tokens,
     listar_en_español,
     construir_calidad,
+    adverbio_por_lift,
     regla_a_frase,
     agrupar_reglas,
     _detalle_por_dia,
     _detalle_por_estacion,
     _parrafo_coloquial_temporal,
+    _verbo_tendencia,
+    _frase_nivel,
+    _etiqueta_nivel,
+    _ADVERBIO_PREFIJO,
+    _NIVELES_SIN_ADVERBIO,
 )
 
 
@@ -60,6 +66,7 @@ class NLGConfig:
     usar_llm_sintesis: bool      = False
     proveedor_llm: str           = "gemini"
     llm_api_key: str | None      = None
+    genero_metrica: str          = "f"   # "f" femenino · "m" masculino
 
 
 # ---------------------------------------------------------------------------
@@ -93,25 +100,28 @@ def grupo_a_parrafo(filas, nombre_metrica, consecuente, min_reglas, modo="tecnic
     # Calcular tokens específicos de cada regla
     especificos = [c - contexto_comun for c in conjuntos]
 
-    # Caso B.1: los detalles diferenciales son solo años → frase simple 
+    # Caso B.1: los detalles diferenciales son solo años → frase simple
     solo_anios = all(e <= ANIOS or not e for e in especificos)
     if solo_anios:
         desc_ctx = verbalizar_antecedente(contexto_comun) if contexto_comun \
                    else verbalizar_antecedente(conjuntos[0])
         prefijo  = "A" if contexto_comun & HORAS else "En"
 
+        _ant   = filas_ordenadas[0]["antecedente"]
+        _lift  = max(f["lift"] for f in filas_ordenadas)
+        _adv   = ("" if consecuente in _NIVELES_SIN_ADVERBIO
+                  else _ADVERBIO_PREFIJO.get(adverbio_por_lift(_lift), ""))
+        _nf    = _frase_nivel(_verbo_tendencia(_ant), desc_v, _adv)
+
         if modo == "tecnico":
             conf_media = sum(f["confianza"] for f in filas_ordenadas) / len(filas_ordenadas)
-            lift_max   = max(f["lift"] for f in filas_ordenadas)
             return (
-                f"{prefijo} {desc_ctx}, la {nombre_metrica} tiende a ser {desc_v} "
+                f"{prefijo} {desc_ctx}, la {nombre_metrica} {_nf} "
                 f"(confianza media {int(round(conf_media*100))} %, "
-                f"lift máximo {lift_max:.1f})."
+                f"lift máximo {_lift:.1f})."
             )
         else:  # coloquial
-            return (
-                f"{prefijo} {desc_ctx}, la {nombre_metrica} tiende a ser {desc_v}."
-            )
+            return f"{prefijo} {desc_ctx}, la {nombre_metrica} {_nf}."
 
     # Caso B.2: párrafo narrativo completo
     detalles = []
@@ -128,15 +138,21 @@ def grupo_a_parrafo(filas, nombre_metrica, consecuente, min_reglas, modo="tecnic
         else:  # coloquial
             detalles.append(desc)
 
+    _ant  = filas_ordenadas[0]["antecedente"]
+    _lift = max(f["lift"] for f in filas_ordenadas)
+    _adv  = ("" if consecuente in _NIVELES_SIN_ADVERBIO
+             else _ADVERBIO_PREFIJO.get(adverbio_por_lift(_lift), ""))
+    _nf   = _frase_nivel(_verbo_tendencia(_ant), desc_v, _adv)
+
     if contexto_comun:
         ctx_desc = verbalizar_antecedente(contexto_comun)
         intro = (
-            f"En el contexto de {ctx_desc}, la {nombre_metrica} tiende a ser "
-            f"{desc_v}, especialmente en {listar_en_español(detalles)}."
+            f"En el contexto de {ctx_desc}, la {nombre_metrica} {_nf}, "
+            f"especialmente en {listar_en_español(detalles)}."
         )
     else:
         intro = (
-            f"La {nombre_metrica} tiende a ser {desc_v} en los siguientes "
+            f"La {nombre_metrica} {_nf} en los siguientes "
             f"contextos: {listar_en_español(detalles)}."
         )
 
@@ -193,7 +209,7 @@ def _mapa_horario(df_reglas):
     return mapa
 
 
-def _nota_fds(df_reglas, mapa_horario, nombre_metrica):
+def _nota_fds(df_reglas, mapa_horario, nombre_metrica, genero="f"):
     """
     Genera la nota de fin de semana solo si hay reglas que la justifiquen,
     y distingue entre 'inversión' y 'reducción'.
@@ -231,26 +247,47 @@ def _nota_fds(df_reglas, mapa_horario, nombre_metrica):
             hay_inversion = True
             break
 
+    art     = "el" if genero == "m" else "la"
+    adj_baj = "bajo" if genero == "m" else "baja"
+
     if hay_inversion:
         return (
-            "Los **fines de semana** invierten el patrón laboral: "
-            "las franjas de mayor actividad entre semana presentan "
-            + nombre_metrica + " sensiblemente más bajo."
+            f"Los **fines de semana** invierten el patrón laboral: "
+            f"las franjas de mayor actividad entre semana presentan "
+            f"{nombre_metrica} sensiblemente más {adj_baj}."
         )
     else:
         return (
-            "Los **fines de semana** el " + nombre_metrica + " se reduce respecto a los días laborables, "
-            "aunque sin llegar a invertir el patrón general."
+            f"Los **fines de semana** {art} {nombre_metrica} se reduce respecto "
+            f"a los días laborables, aunque sin llegar a invertir el patrón general."
         )
 
 
-def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=None):
+def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica,
+                       nombre_franja=None, genero="f"):
     """
     Genera prosa narrativa por franjas, variando la estructura sintáctica
     para evitar repetición y fusionando el contexto de forma fluida.
     """
     if nombre_franja is None:
         nombre_franja = NOMBRE_FRANJA
+
+    art = "el" if genero == "m" else "la"
+
+    # Formas predicativas del nivel concordadas con el género de la métrica.
+    # Solo usadas donde el adjetivo predica directamente el sujeto (es **X**).
+    _NIVEL_PRED = {
+        "m": NIVEL_COLOQUIAL,
+        "f": {
+            "v_OutlierAlto": "excepcionalmente alta",
+            "v_MuyAlta":     "muy alta",
+            "v_Alta":        "alta",
+            "v_Media":       "moderada",
+            "v_Baja":        "baja",
+            "v_MuyBaja":     "muy baja",
+            "v_OutlierBajo": "excepcionalmente baja",
+        },
+    }
 
     def _nivel_franja(horas):
         # Recoge TODAS las reglas de la franja, no solo el pico por hora
@@ -290,7 +327,9 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
 
     # Plantillas con estructura sintáctica diferente por franja
     def _frase_madrugada(rango, nivel, emoji, matiz, ctx, **kwargs):
-        base = f"De madrugada ({rango}), el " + nombre_metrica + " es **" + nivel + "**"
+        # nivel predicativo: usa forma concordada con género de la métrica
+        nivel_pred = _NIVEL_PRED[genero].get(kwargs.get("nivel_clave", ""), nivel)
+        base = f"De madrugada ({rango}), {art} {nombre_metrica} es **{nivel_pred}**"
         detalles = []
         if matiz:
             if ctx["lab"]:
@@ -317,13 +356,13 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
             elif p_act < p_prev - 1:
                 verbo = "baja a niveles"
             elif p_act == p_prev:
-                verbo = "se mantiene en niveles"
+                verbo = "se sitúa en niveles"   # puntual; sin implicación de persistencia
             else:
                 verbo = "se sitúa en niveles"
         else:
             verbo = "alcanza niveles"
 
-        base = f"Al llegar la mañana ({rango}), el {nombre_metrica} {verbo} **{nivel}**"
+        base = f"Al llegar la mañana ({rango}), {art} {nombre_metrica} {verbo} **{nivel}**"
         detalles = []
         if ctx["lab"] and ctx["fds"]:
             detalles.append("en días laborables; se reduce sensiblemente en fin de semana")
@@ -345,13 +384,13 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
             elif p_act < p_prev - 1:
                 verbo = "desciende a niveles"
             elif p_act == p_prev:
-                verbo = "se mantiene"
+                verbo = "queda en"          # puntual; no implica persistencia
             else:
                 verbo = "queda en niveles"
         else:
             verbo = "se sitúa en niveles"
 
-        base = f"Por la tarde ({rango}), el {nombre_metrica} {verbo} **{nivel}**"
+        base = f"Por la tarde ({rango}), {art} {nombre_metrica} {verbo} **{nivel}**"
         detalles = []
         if ctx["lab"] and ctx["fds"]:
             detalles.append("especialmente entre semana, con calma en fin de semana")
@@ -371,13 +410,13 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
             elif p_act > p_prev + 1:
                 verbo = "repunta a un nivel"
             elif p_act == p_prev:
-                verbo = "se mantiene en un nivel"
+                verbo = "queda en un nivel"  # puntual; no implica persistencia
             else:
                 verbo = "queda en un nivel"
         else:
             verbo = "se sitúa en un nivel"
 
-        base = f"Al caer la noche ({rango}), el {nombre_metrica} {verbo} **{nivel}**"
+        base = f"Al caer la noche ({rango}), {art} {nombre_metrica} {verbo} **{nivel}**"
         detalles = []
         if matiz:
             detalles.append(f"con un {matiz}")
@@ -429,7 +468,7 @@ def _parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica, nombre_franja=No
 
     notas = []
 
-    nota_fds = _nota_fds(df_reglas, mapa_horario, nombre_metrica)
+    nota_fds = _nota_fds(df_reglas, mapa_horario, nombre_metrica, genero=genero)
     if nota_fds:
         notas.append(nota_fds)
 
@@ -474,16 +513,14 @@ def _detalle_por_franja(df_reglas, nombre_metrica, min_reglas_grupo=2):
             sub_c = sub[sub["consecuente"] == cons]
             if sub_c.empty:
                 continue
-            desc_v = ETIQUETA_METRICA.get(cons, cons)
-            emoji  = NIVEL_EMOJI.get(cons, "")
             for _, row in sub_c.iterrows():
                 tokens   = parsear_antecedente(row["antecedente"])
                 desc_t   = verbalizar_antecedente(tokens)
                 conf_pct = int(round(row["confianza"] * 100))
                 lift_val = f"{row['lift']:.1f}"
-                cal      = construir_calidad(df_reglas)(row)
+                etiqueta = _etiqueta_nivel(cons, row["lift"]).capitalize()
                 lineas.append(
-                    f"- **{desc_v.capitalize()}** {cal}: "
+                    f"- **{etiqueta}**: "
                     f"{desc_t} (confianza {conf_pct} %, lift {lift_val})"
                 )
         lineas.append("")
@@ -522,9 +559,12 @@ def _parrafo_calendario(df_reglas, nombre_metrica, lift_min=3.0, top_n=3):
         desc_v  = ETIQUETA_METRICA.get(row["consecuente"], row["consecuente"])
         emoji   = NIVEL_EMOJI.get(row["consecuente"], "")
         conf    = int(round(row["confianza"] * 100))
+        _adv    = ("" if row["consecuente"] in _NIVELES_SIN_ADVERBIO
+                   else _ADVERBIO_PREFIJO.get(adverbio_por_lift(row["lift"]), ""))
+        _nf     = _frase_nivel(_verbo_tendencia(row["antecedente"]), desc_v, _adv)
         lineas.append(
-            f"- En **{desc_t}**, la {nombre_metrica} tiende a ser "
-            f"**{desc_v}** (confianza {conf} %, lift {row['lift']:.1f})."
+            f"- En **{desc_t}**, la {nombre_metrica} {_nf} "
+            f"(confianza {conf} %, lift {row['lift']:.1f})."
         )
     return "\n".join(lineas)
 
@@ -713,7 +753,8 @@ def generar_resumen(df_reglas, dataset, metrica, min_reglas_grupo=2,
         lineas.append(f"> Esta sección resume el comportamiento de **{nombre_metrica}** "
                       f"en lenguaje sencillo, sin tecnicismos.")
         lineas.append("")
-        lineas.append(_parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica))
+        lineas.append(_parrafo_coloquial(df_reglas, mapa_horario, nombre_metrica,
+                                         genero=config.genero_metrica))
     else:
         if modo == "estaciones":
             titulo_coloquial = (f"¿Cómo se comporta "

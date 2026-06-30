@@ -196,22 +196,63 @@ def adverbio_por_lift(lift):
     return "con cierta tendencia"
 
 
-def construir_calidad(df_reglas=None):
-    """
-    Devuelve una función calidad(row) que traduce el lift de una regla en
-    un adverbio de fuerza estadística.
-    """
-    def calidad(row):
-        lift = row.get("lift", 0)
+# Solo los dos umbrales más altos de lift generan adverbio de intensidad:
+# "de forma notable" → "notablemente", "de forma muy marcada" → "marcadamente".
+# "con cierta consistencia" describe la fiabilidad del patrón, no la magnitud
+# del nivel, así que no se convierte en prefijo del adjetivo; el lift ya lo informa.
+_ADVERBIO_PREFIJO = {
+    "de forma muy marcada":    "marcadamente",
+    "de forma notable":        "notablemente",
+    "con cierta consistencia": "",
+    "con cierta tendencia":    "",
+}
 
-        if lift >= 3.0:
-            return "de forma muy marcada"
-        elif lift >= 2.0:
-            return "de forma notable"
-        elif lift >= 1.5:
-            return "con cierta consistencia"
-        else:
-            return "con cierta tendencia"
+# Verbos copulativos puntuales (sin implicación de persistencia temporal).
+# Solo 3 para que la variación venga del contenido, no de sinónimos.
+_VERBOS_COPULATIVOS = [
+    "es",
+    "resulta",
+    "se muestra",
+]
+
+# Niveles sin dirección o ya con intensidad máxima: el adverbio de lift no
+# amplifica el adjetivo sino que lo contradice ("marcadamente media") o lo
+# duplica ("marcadamente muy alta"). En estos casos se omite siempre el prefijo.
+_NIVELES_SIN_ADVERBIO = {
+    "v_MuyAlta", "v_MuyBaja", "v_OutlierAlto", "v_OutlierBajo",
+    "v_Media",  # punto neutro de la escala; la fuerza pertenece al patrón, no al nivel
+}
+
+def _verbo_tendencia(clave: str) -> str:
+    """Selección determinista por hash estable de la clave (antecedente o nombre)."""
+    idx = sum(ord(c) for c in clave) % len(_VERBOS_COPULATIVOS)
+    return _VERBOS_COPULATIVOS[idx]
+
+def _frase_nivel(verbo: str, desc_v: str, calidad_adv: str) -> str:
+    """'notablemente alta' antepone el adverbio; sin adverbio omite el hueco."""
+    if calidad_adv:
+        return f"{verbo} {calidad_adv} {desc_v}"
+    return f"{verbo} {desc_v}"
+
+
+def _etiqueta_nivel(cons: str, lift: float, diccionario=None) -> str:
+    """
+    Encabezado de bullet: adverbio prefijado solo para niveles direccionales
+    con lift suficiente. Para extremos (v_MuyAlta…) y v_Media el adverbio sería
+    redundante o contradictorio — se devuelve solo la etiqueta.
+    """
+    from .templates import ETIQUETA_METRICA
+    desc = (diccionario or ETIQUETA_METRICA).get(cons, cons)
+    if cons in _NIVELES_SIN_ADVERBIO:
+        return desc
+    adv = _ADVERBIO_PREFIJO.get(adverbio_por_lift(lift), "")
+    return f"{adv} {desc}" if adv else desc
+
+
+def construir_calidad(df_reglas=None):
+    """Delega en adverbio_por_lift() — ESCALA_ADVERBIAL es la única fuente de verdad."""
+    def calidad(row):
+        return adverbio_por_lift(row.get("lift", 0))
     return calidad
 
 
@@ -232,8 +273,13 @@ def regla_a_frase(row, nombre_metrica, modo="tecnico"):
 
     diccionario = (ETIQUETA_METRICA_COLOQUIAL if modo == "coloquial"
                    else ETIQUETA_METRICA_TECNICA)
-    desc_v  = diccionario.get(row["consecuente"], row["consecuente"])
-    calidad = construir_calidad()(row)
+    desc_v      = diccionario.get(row["consecuente"], row["consecuente"])
+    verbo       = _verbo_tendencia(row["antecedente"])
+    # Adverbio solo para v_Alta / v_Baja con lift suficiente; el resto de niveles
+    # (extremos, neutros) no admiten modificación de intensidad sobre el adjetivo.
+    calidad_adv = ("" if row["consecuente"] in _NIVELES_SIN_ADVERBIO
+                   else _ADVERBIO_PREFIJO.get(construir_calidad()(row), ""))
+    nivel_frase = _frase_nivel(verbo, desc_v, calidad_adv)
 
     prefijos = {
         "hora":       "A",
@@ -251,11 +297,10 @@ def regla_a_frase(row, nombre_metrica, modo="tecnico"):
     if modo == "tecnico":
         conf_pct = int(round(row["confianza"] * 100))
         lift_val = f"{row['lift']:.1f}"
-        return (f"{prefijo} {desc_t}, la {nombre_metrica} tiende a ser {desc_v} "
-                f"{calidad} (confianza {conf_pct} %, lift {lift_val}).")
+        return (f"{prefijo} {desc_t}, la {nombre_metrica} {nivel_frase} "
+                f"(confianza {conf_pct} %, lift {lift_val}).")
     else:
-        return (f"{prefijo} {desc_t}, la {nombre_metrica} tiende a ser {desc_v} "
-                f"{calidad}.")
+        return f"{prefijo} {desc_t}, la {nombre_metrica} {nivel_frase}."
 
 
 # ---------------------------------------------------------------------------
@@ -368,15 +413,14 @@ def _detalle_por_dia(df_reglas, nombre_metrica, min_reglas_grupo=2):
             sub_c = sub[sub["consecuente"] == cons]
             if sub_c.empty:
                 continue
-            desc_v = ETIQUETA_METRICA.get(cons, cons)
             for _, row in sub_c.iterrows():
                 tokens   = parsear_antecedente(row["antecedente"])
                 desc_t   = verbalizar_antecedente(tokens)
                 conf_pct = int(round(row["confianza"] * 100))
                 lift_val = f"{row['lift']:.1f}"
-                cal      = construir_calidad(df_reglas)(row)
+                etiqueta = _etiqueta_nivel(cons, row["lift"]).capitalize()
                 lineas.append(
-                    f"- **{desc_v.capitalize()}** {cal}: "
+                    f"- **{etiqueta}**: "
                     f"{desc_t} (confianza {conf_pct} %, lift {lift_val})"
                 )
         lineas.append("")
@@ -424,15 +468,14 @@ def _detalle_por_estacion(df_reglas, nombre_metrica, min_reglas_grupo=2):
             sub_c = sub[sub["consecuente"] == cons]
             if sub_c.empty:
                 continue
-            desc_v = ETIQUETA_METRICA.get(cons, cons)
             for _, row in sub_c.iterrows():
                 tokens   = parsear_antecedente(row["antecedente"])
                 desc_t   = verbalizar_antecedente(tokens)
                 conf_pct = int(round(row["confianza"] * 100))
                 lift_val = f"{row['lift']:.1f}"
-                cal      = construir_calidad(df_reglas)(row)
+                etiqueta = _etiqueta_nivel(cons, row["lift"]).capitalize()
                 lineas.append(
-                    f"- **{desc_v.capitalize()}** {cal}: "
+                    f"- **{etiqueta}**: "
                     f"{desc_t} (confianza {conf_pct} %, lift {lift_val})"
                 )
         lineas.append("")
@@ -554,8 +597,9 @@ def _por_estaciones(df_reglas, nombre_metrica) -> str:
     if len(ords) == 1:
         est, d = ords[0]
         sufijo = f", especialmente en {d['mes']}" if d["mes"] else ""
-        return (f"En {est.lower()}, la {nombre_metrica} tiende a ser "
-                f"**{d['desc']}**{sufijo}.")
+        # Verbo rotado por nombre de estación para variedad léxica reproducible
+        return (f"En {est.lower()}, la {nombre_metrica} "
+                f"{_verbo_tendencia(est)} **{d['desc']}**{sufijo}.")
 
     # ── Caso: dos estaciones ───────────────────────────────────────────────
     if len(ords) == 2:
@@ -587,7 +631,7 @@ def _por_estaciones(df_reglas, nombre_metrica) -> str:
                    if meses_alt else "")
     frases.append(
         f"{nombres_alt.capitalize()} {verb} {epocas} donde "
-        f"la {nombre_metrica} tiende a ser **{desc_alt}**{suf_mes_alt}."
+        f"la {nombre_metrica} {_verbo_tendencia(nombres_alt)} **{desc_alt}**{suf_mes_alt}."
     )
 
     # Frase baja
@@ -603,7 +647,7 @@ def _por_estaciones(df_reglas, nombre_metrica) -> str:
             suf_mes_baj = ""
         frases.append(
             f"En {nombres_baj}, en cambio, "
-            f"la {nombre_metrica} tiende a ser **{desc_baj}**{suf_mes_baj}."
+            f"la {nombre_metrica} {_verbo_tendencia(nombres_baj)} **{desc_baj}**{suf_mes_baj}."
         )
 
     # Frases de transición
@@ -611,13 +655,13 @@ def _por_estaciones(df_reglas, nombre_metrica) -> str:
         if d["mes"]:
             frases.append(
                 f"{est} actúa como período de transición: "
-                f"la {nombre_metrica} tiende a ser **{d['desc']}**, "
+                f"la {nombre_metrica} {_verbo_tendencia(est)} **{d['desc']}**, "
                 f"con {d['mes']} marcando ya un cambio notable."
             )
         else:
             frases.append(
                 f"{est} actúa como período de transición, "
-                f"con la {nombre_metrica} tendiendo a ser **{d['desc']}**."
+                f"donde la {nombre_metrica} {_verbo_tendencia(est)} **{d['desc']}**."
             )
 
     return " ".join(frases)
@@ -657,8 +701,9 @@ def _por_meses(df_reglas, nombre_metrica) -> str:
     frases = []
     for mes, nivel, _ in destacados:
         desc = ETIQUETA_METRICA_COLOQUIAL.get(nivel, nivel)
+        # Verbo rotado por nombre de mes para variedad léxica reproducible
         frases.append(f"en {mes}, {articulo} {nombre_metrica} "
-                      f"tiende a ser **{desc}**")
+                      f"{_verbo_tendencia(mes)} **{desc}**")
 
     parrafo = frases[0].capitalize()
     for f in frases[1:]:
